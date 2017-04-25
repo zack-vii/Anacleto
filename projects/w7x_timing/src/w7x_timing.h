@@ -46,12 +46,12 @@ struct w7x_timing {//manual packing 64 bit
   uint8_t  w_invert;            //0x0E
   uint8_t  w_gate;              //0x0F
   uint64_t w_delay;             //0x10
-  uint32_t w_width;             //0x18
-  uint32_t w_period;            //0x1C
-  uint64_t w_burst;             //0x20
-  uint64_t w_cycle;             //0x28
-  uint64_t w_repeat;            //0x30
-  uint64_t w_count;             //0x38
+  uint64_t w_width;             //0x18
+  uint64_t w_period;            //0x20
+  uint64_t w_burst;             //0x28
+  uint64_t w_cycle;             //0x30
+  uint32_t w_repeat;            //0x38
+  uint32_t w_count;             //0x3C
   uint64_t w_times[MAX_SAMPLES];//0x40 ++0x08
 };
 

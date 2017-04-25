@@ -40,20 +40,21 @@ architecture Behavioral of w7x_timing is
     -- signals
     signal state        : std_logic_vector(7 downto 0) := IDLE;
     signal error        : std_logic_vector(DATA_WIDTH-1 downto 8) := (others => '0');   
-    signal sample       : unsigned(TIME_WIDTH-1 downto 0);
     -- measure number of samples in sequence, i.e. len(times)
     signal sample_count : unsigned(ADDR_WIDTH-1 downto 0) := zeroaddr; -- start_cycle   =0, do_waiting_sample ++
     signal sample_total : unsigned(ADDR_WIDTH-1 downto 0);
     -- measure number of repetitions
     signal repeat_count : unsigned(31 downto 0) := zero32; -- start_program =0, start_waiting_repeat ++
     signal repeat_total : unsigned(31 downto 0);
+    -- start of next burst
+    signal sample       : unsigned(TIME_WIDTH-1 downto 0);
     -- measure number of bursts
     signal burst_count  : unsigned(TIME_WIDTH-1 downto 0) := zerotime; -- start_program =0, start_waiting_repeat ++
     signal burst_total  : unsigned(TIME_WIDTH-1 downto 0);
     -- measure high and low of signal
-    signal period_ticks : unsigned(31 downto 0) := zero32;
-    signal high_total   : unsigned(31 downto 0);
-    signal period_total : unsigned(31 downto 0);
+    signal period_ticks : unsigned(TIME_WIDTH-1 downto 0) := zerotime;
+    signal high_total   : unsigned(TIME_WIDTH-1 downto 0);
+    signal period_total : unsigned(TIME_WIDTH-1 downto 0);
     -- sequence counter
     signal cycle_ticks  : unsigned(TIME_WIDTH-1 downto 0) := zerotime;
     signal delay_total  : unsigned(TIME_WIDTH-1 downto 0);
@@ -69,13 +70,13 @@ begin
     sample       <= unsigned(sample_in(TIME_WIDTH-1 downto 0));
   buffer_input: process(clk_in,sample_in,head_in) begin
     if falling_edge(clk_in) then
-      delay_total  <= unsigned(head_in(0*DATA_WIDTH+TIME_WIDTH-1 downto 0*DATA_WIDTH));
-      high_total   <= unsigned(head_in(1*DATA_WIDTH+31           downto 1*DATA_WIDTH));
-      period_total <= unsigned(head_in(1*DATA_WIDTH+31+32        downto 1*DATA_WIDTH+32));
-      burst_total  <= unsigned(head_in(2*DATA_WIDTH+TIME_WIDTH-1 downto 2*DATA_WIDTH));
-      cycle_total  <= unsigned(head_in(3*DATA_WIDTH+TIME_WIDTH-1 downto 3*DATA_WIDTH));
-      repeat_total <= unsigned(head_in(4*DATA_WIDTH+31           downto 4*DATA_WIDTH));
-      sample_total <= unsigned(head_in(5*DATA_WIDTH+ADDR_WIDTH-1 downto 5*DATA_WIDTH));
+      delay_total  <= unsigned(head_in(0*DATA_WIDTH+TIME_WIDTH-1  downto 0*DATA_WIDTH));
+      high_total   <= unsigned(head_in(1*DATA_WIDTH+TIME_WIDTH-1  downto 1*DATA_WIDTH));
+      period_total <= unsigned(head_in(2*DATA_WIDTH+TIME_WIDTH-1  downto 2*DATA_WIDTH));
+      burst_total  <= unsigned(head_in(3*DATA_WIDTH+TIME_WIDTH-1  downto 3*DATA_WIDTH));
+      cycle_total  <= unsigned(head_in(4*DATA_WIDTH+TIME_WIDTH-1  downto 4*DATA_WIDTH));
+      repeat_total <= unsigned(head_in(5*DATA_WIDTH+31            downto 5*DATA_WIDTH));
+      sample_total <= unsigned(head_in(5*DATA_WIDTH+ADDR_WIDTH+31 downto 5*DATA_WIDTH+32));
     end if;
   end process buffer_input;
   clock_gen:  process(clk_in, armed_in, trigger_in, clear_in, 
@@ -97,7 +98,7 @@ begin
     -- resets period_ticks (1)
     begin
       state <= WAITING_HIGH;
-      period_ticks <= one32;
+      period_ticks <= onetime;
     end start_sample;
 
     procedure start_burst(csample : unsigned) is
@@ -114,7 +115,7 @@ begin
     begin
       cycle_ticks  <= onetime;
       burst_count  <= zerotime;
-      period_ticks <= one32;
+      period_ticks <= onetime;
       sample_count <= zeroaddr;
       repeat_count <= zero32;
       state <= ARMED;
@@ -155,7 +156,7 @@ begin
         start_burst(zeroaddr);
       else
         sample_count <= zeroaddr;
-        period_ticks <= zero32;
+        period_ticks <= zerotime;
         state <= WAITING_SAMPLE;
       end if;
       cycle_ticks <= onetime;

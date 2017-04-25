@@ -1,3 +1,4 @@
+#!/usr/bin/python2
 import ctypes as _c, numpy as _n
 import socket as _s, struct as _p
 
@@ -13,8 +14,8 @@ class w7x_timing(object):
     @staticmethod
     def _toctypes(delay,width,period,burst,cycle,repeat,*args):
         delay  = None if delay  is None else _c.c_uint64(int(delay ))
-        width  = None if width  is None else _c.c_uint32(int(width ))
-        period = None if period is None else _c.c_uint32(int(period))
+        width  = None if width  is None else _c.c_uint64(int(width ))
+        period = None if period is None else _c.c_uint64(int(period))
         burst  = None if burst  is None else _c.c_uint64(int(burst ))
         cycle  = None if cycle  is None else _c.c_uint64(int(cycle ))
         repeat = None if repeat is None else _c.c_uint32(int(repeat))
@@ -33,6 +34,7 @@ class w7x_timing(object):
             self._error = _c.cast(self.cdll.getError(),_c.c_char_p)
         except OSError as exc:
             print('w7x_timing: '+ str(exc))
+            raise
     def arm(self):
         self.cdll.arm()
     def disarm(self):
@@ -109,11 +111,11 @@ class w7x_timing(object):
                         cmd = ''.join(cmd)
                         cmd,param = cmd[0],cmd[1:]
                         if   cmd == 'C':
-                            param = tuple((None if p<0 else p) for p in _p.unpack('<qllqql',param[:36]))
+                            param = tuple((None if p<0 else p) for p in _p.unpack('<qqqqql',param[:44]))
                             self.makeClock(*param)
                         elif cmd == 'S':
-                            args = tuple((None if p<0 else p) for p in _p.unpack('<qllqql',param[:36]))
-                            times = _n.fromstring(param[36:length],_n.uint64)
+                            args = tuple((None if p<0 else p) for p in _p.unpack('<qqqqql',param[:44]))
+                            times = _n.fromstring(param[44:length],_n.uint64)
                             self.makeSequence(*args,times=times)
                         elif cmd == 'R':
                             self.reinit([(None if p<0 else p) for p in _p.unpack('<q',param[:8])][0])
@@ -133,7 +135,7 @@ class w7x_timing(object):
                             conn.send(_p.pack('<L',self.state))
                             continue
                         elif cmd == 'p':
-                            conn.send(_p.pack('<qllqqll',*self.params))
+                            conn.send(_p.pack('<qqqqqll',*self.params))
                             continue
                         elif cmd == 'e':
                             pass #only return error
@@ -158,7 +160,7 @@ class w7x_timing(object):
 class remote(object):
     @staticmethod
     def _makeMsg(prog,form,length,*args):
-        return 'W7X'+_p.pack('<L',length)+prog[0]+_p.pack('<'+form,*args)
+        return 'W7X'+_p.pack('<L',length)+prog[0]+_p.pack(form,*args)
     def __init__(self,address):
         self.connect(address)
     def connect(self,address):
@@ -170,15 +172,15 @@ class remote(object):
         if length>0:
             return self.sock.recv(length+255)
     def makeClock(self,delay=-1,width=-1,period=-1,burst=-1,cycle=-1,repeat=-1):
-        msg = remote._makeMsg('C','qllqql',36,int(delay),int(width),int(period),int(burst),int(cycle),int(repeat))
+        msg = remote._makeMsg('C','<qqqqql',44,int(delay),int(width),int(period),int(burst),int(cycle),int(repeat))
         return self._exchange(msg)
     def makeSequence(self,delay=-1,width=-1,period=-1,burst=-1,cycle=-1,repeat=-1,times=-1):
         times = _n.array(times,_n.int64).tostring()
-        length = len(times)+36
-        msg = remote._makeMsg('S','qllqql',length,int(delay),int(width),int(period),int(burst),int(cycle),int(repeat))+times
+        length = len(times)+44
+        msg = remote._makeMsg('S','<qqqqql',length,int(delay),int(width),int(period),int(burst),int(cycle),int(repeat))+times
         return self._exchange(msg)
     def reinit(self,default_delay=-1):
-        msg = remote._makeMsg('R','q',8,default_delay)
+        msg = remote._makeMsg('R','<q',8,default_delay)
         return self._exchange(msg)
     def arm(self):
         msg = remote._makeMsg('A','',0)
@@ -190,13 +192,13 @@ class remote(object):
         msg = remote._makeMsg('T','',0)
         return self._exchange(msg)
     def extclk(self,value=True):
-        msg = remote._makeMsg('E','B',1,-1 if value else 0)
+        msg = remote._makeMsg('E','<B',1,-1 if value else 0)
         return self._exchange(msg)
     def gate(self,val=0):
-        msg = remote._makeMsg('G','B',1,w7x_timing._tobyte(val))
+        msg = remote._makeMsg('G','<B',1,w7x_timing._tobyte(val))
         return self._exchange(msg)
     def invert(self,val=0):
-        msg = remote._makeMsg('I','B',1,w7x_timing._tobyte(val))
+        msg = remote._makeMsg('I','<B',1,w7x_timing._tobyte(val))
         return self._exchange(msg)
     @property
     def state(self):
@@ -205,7 +207,7 @@ class remote(object):
     @property
     def params(self):
         self.sock.send(remote._makeMsg('p','',0))
-        return _p.unpack('<qllqqll',self.sock.recv(40)[:40])
+        return _p.unpack('<qqqqqll',self.sock.recv(48))
     @property
     def error(self):
         msg = remote._makeMsg('e','',0)
@@ -261,5 +263,3 @@ if __name__=="__main__":
             w7x.run(port)
         except:
             test(sys.argv[1])
-    elif len(sys.argv)==3:
-        remote((sys.argv[1],int(sys.argv[2])))

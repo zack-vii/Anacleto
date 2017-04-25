@@ -4,7 +4,7 @@ RedPitayaIP=$1
 ssh root@${RedPitayaIP} "cd /git/mdsplus&&git clean -fxd"
 ssh root@${RedPitayaIP} "rm -rf /usr/local/mdsplus/tdi/w7x_timing;mkdir /usr/local/mdsplus/tdi/w7x_timing"
 scp ${src}/tdi/*.fun      root@${RedPitayaIP}:/usr/local/mdsplus/tdi/w7x_timing ; \
-scp ${src}/logic/out/red_pitaya.bit ${src}/src/w7x_timing.ko ${src}/src/w7x_timing_test      root@${RedPitayaIP}:/root && \
+scp ${src}/logic/out/red_pitaya.bit ${src}/src/w7x_timing.ko ${src}/src/w7x_timing_test ${src}/src/W7XTIMING.py root@${RedPitayaIP}:/root && \
 scp ${src}/src/libw7x_timing_lib.so      root@${RedPitayaIP}:/usr/local/lib && \
 if [ -z "$2" ]
 then

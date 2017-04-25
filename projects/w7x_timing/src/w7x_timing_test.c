@@ -12,16 +12,16 @@
 int main(int argc, char *argv[])
 {
     int i, c_status;
-    uint64_t delay, cycle, burst, *times;
-    uint32_t width, period, repeat;
+    uint64_t delay, width, period, burst, cycle, *times;
+    uint32_t repeat;
     if(argc < 7) {
 	printf("Usage: %s Delay Width Period Burst Cycle Repeat [Seq1..Seq16]\n", argv[0]);
 	exit(C_PARAM_ERROR);
     }
     disarm();
     delay  = (uint64_t)atoi(argv[1]);
-    width  = atoi(argv[2]);
-    period = atoi(argv[3]);
+    width  = (uint64_t)atoi(argv[2]);
+    period = (uint64_t)atoi(argv[3]);
     burst  = (uint64_t)atoi(argv[4]);
     cycle  = (uint64_t)atoi(argv[5]);
     repeat = atoi(argv[6]);

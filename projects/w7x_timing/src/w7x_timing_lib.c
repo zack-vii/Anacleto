@@ -6,8 +6,8 @@
 static struct timespec t = {0,100};
 static char error[1024];
 #define CHECK_INPUTS \
-  uint64_t delay, cycle, burst; \
-  uint32_t width, period, repeat; \
+  uint64_t delay, cycle, burst, width, period; \
+  uint32_t repeat; \
   if (!width_p && !period_p && !cycle_p && !repeat_p && !burst_p) { \
     delay  = delay_p ? *delay_p : DEFAULT_DELAY; \
     width  = 5; \
@@ -121,7 +121,7 @@ int getState() {
   return getStatus(0,&pos);
 }
 
-int getParams(uint64_t *delay_p, uint32_t *width_p, uint32_t *period_p, uint64_t *burst_p, uint64_t *cycle_p, uint32_t *repeat_p, uint32_t *count_p) {
+int getParams(uint64_t *delay_p, uint64_t *width_p, uint64_t *period_p, uint64_t *burst_p, uint64_t *cycle_p, uint32_t *repeat_p, uint32_t *count_p) {
   INIT_DEVICE
   if (delay_p) *delay_p  = dev->w_delay;
   if (width_p) *width_p  = dev->w_width;
@@ -141,8 +141,8 @@ int getTimes(uint32_t offset, uint32_t count, uint64_t *times_p) {
   return C_OK;
 }
 
-int setParams(uint64_t delay, uint32_t width, uint32_t period, uint64_t burst, uint64_t cycle, uint32_t repeat, uint32_t count, int *pos) {
-  *pos += sprintf(error+*pos,"DELAY: %llu, WIDTH: %u, PERIOD: %u, BURST: %llu, CYCLE: %llu, REPEAT: %u, COUNT: %u\n", delay, width, period, burst, cycle, repeat, count);
+int setParams(uint64_t delay, uint64_t width, uint64_t period, uint64_t burst, uint64_t cycle, uint32_t repeat, uint32_t count, int *pos) {
+  *pos += sprintf(error+*pos,"DELAY: %llu, WIDTH: %llu, PERIOD: %llu, BURST: %llu, CYCLE: %llu, REPEAT: %u, COUNT: %u\n", delay, width, period, burst, cycle, repeat, count);
   if (count > MAX_SAMPLES) {
     *pos += sprintf(error+*pos,"ERROR: COUNT > MAX_SAMPLES(%d)\n",MAX_SAMPLES);
     return C_PARAM_ERROR;
@@ -183,7 +183,7 @@ char* getError() {
   return error;
 }
 
-int makeClock(const uint64_t *delay_p, const uint32_t *width_p, const uint32_t *period_p, const uint64_t *burst_p, const uint64_t *cycle_p, const uint32_t *repeat_p){
+int makeClock(const uint64_t *delay_p, const uint64_t *width_p, const uint64_t *period_p, const uint64_t *burst_p, const uint64_t *cycle_p, const uint32_t *repeat_p){
     int pos = sprintf(error,"MAKE CLOCK: ");
     CHECK_INPUTS
     if (cycle_p) {
@@ -203,7 +203,7 @@ int makeClock(const uint64_t *delay_p, const uint32_t *width_p, const uint32_t *
     return C_OK;
 }
 
-int makeSequence(const uint64_t *delay_p, const uint32_t *width_p, const uint32_t *period_p, const uint64_t *burst_p, const uint64_t *cycle_p, const uint32_t *repeat_p, const uint32_t *count_p, const uint64_t *times){
+int makeSequence(const uint64_t *delay_p, const uint64_t *width_p, const uint64_t *period_p, const uint64_t *burst_p, const uint64_t *cycle_p, const uint32_t *repeat_p, const uint32_t *count_p, const uint64_t *times){
     int pos = sprintf(error,"MAKE SEQUENCE: ");
     if (!times || !count_p) {
       pos += sprintf(error+pos,"ERROR: TIMES = NULL");
