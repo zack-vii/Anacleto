@@ -119,8 +119,7 @@ sdk/dts/system.dts:  $(FPGA_BIT)
 	  $(HSI) -source $(FPGA_DIR)/vivado_make.tcl -tclargs write_devicetree
 
 $(DTS): sdk/dts/system.dts $(LINUX_IMAGE)
-	$(LINUX_BUILDDIR)/scripts/dtc/dtc -I dts -O dts -o $@ -i sdk/dts/ $<
-
+	$(LINUX_BUILDDIR)/scripts/dtc/dtc -I dts -O dts -o $@ -i sdk/dts/ $<;cat $(top_builddir)/fpga/heartbeat.dtsi >> $(DTS)
 $(DTB):  $(DTS) $(LINUX_IMAGE)
 	$(LINUX_BUILDDIR)/scripts/dtc/dtc -I dts -O dtb -o $@ -i sdk/dts/ $<
 
