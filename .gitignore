@@ -1,7 +1,8 @@
-.cache/
-*.cmd
-.config
 .hw/
+.symvers
+.tmp_versions/
+
+*.cmd
 *.ko
 *.log
 *mod.c
@@ -9,9 +10,17 @@
 *.o
 *.pyc
 *.so
-.symvers
-.tmp_versions/
 *.xpr
+
+# latex
+*.aux
+*.bbl
+*.blg
+*.synctex
+
+# automake and make
+.cache/
+.config
 aclocal.m4
 autom4te.cache/
 config.h
