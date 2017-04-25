@@ -1,0 +1,10 @@
+[Unit]
+Description=w7x timing server
+After=network.target w7x_timing_fpga.service
+
+[Service]
+ExecStart=/root/W7XTIMING.py 5000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
