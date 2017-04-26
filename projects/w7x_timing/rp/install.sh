@@ -1,8 +1,7 @@
 #!/bin/sh
 set -e
 S=$(realpath $(dirname ${0}))
-RedPitayaIP=$1
-RP=root@${RedPitayaIP}
+RP=root@$1
 if [ "0$2" -gt "0" ]
 then
   if [ "$2" -gt "1" ]
@@ -15,11 +14,9 @@ then
     ssh $RP apt-get -y install python-numpy kmod
   fi
   ssh $RP ". /etc/profile&&rw&&mount -o remount,rw /boot&&echo ok||echo failed"
-  scp $S/logic/sdk/dts/devicetree.dtb $S/../../uImage $RP:/boot
+  scp $S/boot/* $RP:/boot
 fi
-scp -r $S/rp/* $RP:/
-scp $S/src/libw7x_timing_lib.so $RP:/lib
-scp $S/logic/out/red_pitaya.bit $S/src/w7x_timing.ko $RP:/root
+scp -r $S/bin $S/etc $S/lib $S/root $RP:/*
 ssh $RP systemctl enable w7x_timing w7x_timing_fpga
 if [ "0$2" -gt "0" ]
 then

@@ -1,6 +1,19 @@
 #!/usr/bin/python2
-import ctypes as _c, numpy as _n
-import socket as _s, struct as _p
+import ctypes as _c
+import numpy as _n,socket as _s, struct as _p
+
+""" STATE CONSTANTS """
+
+# state[0]:error, state[1]:ok
+STATE_IDLE   = [  6,  7]
+STATE_ARMED  = [ 14, 15]
+STATE_DELAY  = [ 22, 23]
+STATE_SAMPLE = [114,115]
+STATE_LOW    = [ 82, 83]
+STATE_HIGH   = [210,211]
+STATE_REPEAT = [ 50, 51]
+
+""" SERVER INTERFACE """
 
 class w7x_timing(object):
     _NULL = _c.c_void_p(None)
@@ -23,18 +36,32 @@ class w7x_timing(object):
           count= None if args[0] is None else _c.c_uint32(int(args[0]))
           return (delay,width,period,burst,cycle,repeat,count)
         return (delay,width,period,burst,cycle,repeat)
-
     @staticmethod
     def _byref(*args):
         return tuple((w7x_timing._NULL if a is None else _c.byref(a)) for a in args)
+
     def __init__(self):
         try:
             self.cdll = _c.CDLL('libw7x_timing_lib.so')
             self.cdll.getError.restype=_c.c_void_p
             self._error = _c.cast(self.cdll.getError(),_c.c_char_p)
+            self.tryExt()
         except OSError as exc:
             print('w7x_timing: '+ str(exc))
             raise
+    def tryExt(self):
+        from time import sleep
+        self.disarm()
+        self.extclk(0)
+        idle = self.state
+        self.makeClock(1e7)
+        self.extclk(1)
+        self.arm()
+        sleep(0.1)
+        hasext = self.state != idle
+        if not hasext: self.extclk(0)
+        self.disarm()
+        return hasext
     def arm(self):
         self.cdll.arm()
     def disarm(self):
@@ -157,6 +184,8 @@ class w7x_timing(object):
             except Exception as e:
                 print(e)
 
+""" REMOTE CONNECTION """
+
 class remote(object):
     @staticmethod
     def _makeMsg(prog,form,length,*args):
@@ -192,7 +221,7 @@ class remote(object):
         msg = remote._makeMsg('T','',0)
         return self._exchange(msg)
     def extclk(self,value=True):
-        msg = remote._makeMsg('E','<B',1,-1 if value else 0)
+        msg = remote._makeMsg('E','<b',1,-1 if value else 0)
         return self._exchange(msg)
     def gate(self,val=0):
         msg = remote._makeMsg('G','<B',1,w7x_timing._tobyte(val))
@@ -217,35 +246,32 @@ class remote(object):
 
 import unittest as _u
 class Test(_u.TestCase):
-    _redpitaya = ('localhost',5000)
-    def checkClock(self,out,error,*args,**kwargs):
-        self.assertEqual(self.remote.makeClock(*args,**kwargs).split('\n',2)[1].strip(),error)
-        self.assertEqual(self.remote.params,out)
-
     def connect(self):
         import time
-        self.remote=remote(Test._redpitaya)
-        self.assertIsNone(self.remote.reinit())
-        self.assertEqual(self.remote.reinit(6e8),'MAKE CLOCK: DELAY: 600000000, WIDTH: 5, PERIOD: 10, BURST: 0, CYCLE: 0, REPEAT: 0, COUNT: 1\n')
-        self.remote.reinit();
-        self.checkClock((0,5,10,1000,10000000,5,1),'',cycle=10000000,burst=1000,repeat=5)
-        self.assertEqual(self.remote.makeSequence(200,5,10,100,1e6,3,[0,1e4,4e4,5e4,6e4]).strip(),
-        "MAKE SEQUENCE: TIMES: [0, 10000, 40000, 50000, 60000],\nDELAY: 200, WIDTH: 5, PERIOD: 10, BURST: 100, CYCLE: 1000000, REPEAT: 3, COUNT: 5")
-        self.assertIsNone(self.remote.gate([2,4]))
-        self.assertIsNone(self.remote.invert([4,5]))
-        self.assertIsNone(self.remote.arm())
-        self.assertIsNone(self.remote.trig())
+        dev = w7x_timing()
+        dev.reinit(6e8),
+        self.assertEqual(dev.error.strip(),"MAKE CLOCK: DELAY: 600000000, WIDTH: 5, PERIOD: 10, BURST: 0, CYCLE: 0, REPEAT: 0, COUNT: 1")
+        dev.reinit();
+        dev.makeClock(cycle=10000000,burst=1000,repeat=5)
+        self.assertEqual(dev.error.strip(),"MAKE CLOCK: DELAY: 0, WIDTH: 5, PERIOD: 10, BURST: 1000, CYCLE: 10000000, REPEAT: 5, COUNT: 1")
+        self.assertEqual(dev.params,(0,5,10,1000,10000000,5,1))
+        dev.makeSequence(1e6,5,10,100,1e6,3,[0,1e4,4e4,5e4,6e4])
+        self.assertEqual(dev.error.strip(),"MAKE SEQUENCE: TIMES: [0, 10000, 40000, 50000, 60000],\nDELAY: 1000000, WIDTH: 5, PERIOD: 10, BURST: 100, CYCLE: 1000000, REPEAT: 3, COUNT: 5")
+        dev.gate([2,4])
+        dev.invert([4,5])
+        self.assertEqual(dev.state,STATE_IDLE[1])
+        dev.arm()
+        self.assertEqual(dev.state,STATE_ARMED[1])
+        dev.trig()
+        self.assertEqual(dev.state,STATE_DELAY[1])
         time.sleep(1)
-        self.assertIsNone(self.remote.disarm())
+        self.assertEqual(dev.state,STATE_ARMED[1])
+        dev.disarm()
+        self.assertEqual(dev.state,STATE_IDLE[1])
     def runTest(self):
         self.connect()
 
-def test(hostname=None):
-    if hostname is None:
-      import os
-      Test._redpitaya = (os.getenv('RedPitaya','RP-F0432C'),5000)
-    else:
-      Test._redpitaya = (hostname,5000)
+def test():
     suite=_u.TestSuite((Test('connect'),))
     tr=_u.TextTestRunner()
     tr.run(suite)
@@ -254,12 +280,12 @@ def test(hostname=None):
 
 if __name__=="__main__":
     import sys
-    if len(sys.argv)==1:
-        test()
-    elif len(sys.argv)==2:
+    if len(sys.argv)>1:
         try:
             port = int(sys.argv[1])
-            w7x = w7x_timing()
-            w7x.run(port)
-        except:
-            test(sys.argv[1])
+            w7x_timing().run(port)
+        except ValueError:
+            test()
+    else:
+        w7x_timing().run(5000)
+
