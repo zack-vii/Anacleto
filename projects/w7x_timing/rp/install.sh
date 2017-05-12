@@ -16,7 +16,7 @@ then
   ssh $RP ". /etc/profile&&rw&&mount -o remount,rw /boot&&echo ok||echo failed"
   scp $S/boot/* $RP:/boot
 fi
-scp -r $S/bin $S/etc $S/lib $S/root $RP:/*
+scp -r $S/bin $S/etc $S/lib $S/root $RP:/
 ssh $RP systemctl enable w7x_timing w7x_timing_fpga
 if [ "0$2" -gt "0" ]
 then
