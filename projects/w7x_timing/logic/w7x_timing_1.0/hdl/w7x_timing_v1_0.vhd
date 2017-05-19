@@ -104,6 +104,7 @@ architecture arch_imp of w7x_timing_v1_0 is
     port (
     clk_in     : in  STD_LOGIC;
     trigger_in : in  STD_LOGIC;
+    on_in      : in  STD_LOGIC;
     armed_in   : in  STD_LOGIC;
     clear_in   : in  STD_LOGIC;
     head_in    : in  STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
@@ -151,20 +152,30 @@ architecture arch_imp of w7x_timing_v1_0 is
     
     signal bram_douta_buf : std_logic_vector(BRAM_WIDTH-1 downto 0);
 
-    alias c_init     : std_logic_vector(7 downto 0) is ctrl_buf(0*8+7 downto 0*8);
-    alias c_trig     : std_logic_vector(7 downto 0) is ctrl_buf(1*8+7 downto 1*8);
-    alias c_clear    : std_logic_vector(7 downto 0) is ctrl_buf(2*8+7 downto 2*8);
-    alias c_reinit   : std_logic_vector(7 downto 0) is ctrl_buf(3*8+7 downto 3*8);
-    alias c_save     : std_logic_vector(7 downto 0) is ctrl_buf(4*8+7 downto 4*8);
-    alias c_extclk   : std_logic_vector(7 downto 0) is ctrl_buf(5*8+7 downto 5*8);
-    alias c_invert   : std_logic_vector(7 downto 0) is ctrl_buf(6*8+7 downto 6*8);
-    alias c_gate     : std_logic_vector(7 downto 0) is ctrl_buf(7*8+7 downto 7*8);
+    alias cc_init    : std_logic_vector(7 downto 0) is ctrl_buf(0*8+7 downto 0*8);
+    alias cc_trig    : std_logic_vector(7 downto 0) is ctrl_buf(1*8+7 downto 1*8);
+    alias cc_clear   : std_logic_vector(7 downto 0) is ctrl_buf(2*8+7 downto 2*8);
+    alias cc_save    : std_logic_vector(7 downto 0) is ctrl_buf(3*8+7 downto 3*8);
+    alias cc_extclk  : std_logic_vector(7 downto 0) is ctrl_buf(4*8+7 downto 4*8);
+    alias cc_invert  : std_logic_vector(7 downto 0) is ctrl_buf(5*8+7 downto 5*8);
+    alias cc_gate    : std_logic_vector(7 downto 0) is ctrl_buf(6*8+7 downto 6*8);
+    alias cc_gate2   : std_logic_vector(7 downto 0) is ctrl_buf(7*8+7 downto 7*8);
+    alias c_on       : std_logic is cc_init(0);
+    alias c_arm      : std_logic is cc_init(1);
+    alias c_rearm    : std_logic is cc_init(2);
+    alias c_reinit   : std_logic is cc_init(3);
+    alias c_trig     : std_logic is cc_trig(0);
+    alias c_clear    : std_logic is cc_clear(0);
+    alias c_save     : std_logic is cc_save(0);
+    alias c_extclk   : std_logic is cc_extclk(0);
 
     signal trigger   : std_logic;
     alias  sig       : std_logic is state(7);
     alias  gate      : std_logic is state(6);
+    alias  running   : std_logic is state(4);
     alias  armed     : std_logic is state(3);
     alias  ok        : std_logic is state(0);
+    alias  gate2     : std_logic is s_addr(0);
 
     signal clk       : std_logic := '0';
     signal clk_int   : std_logic := '0';
@@ -176,10 +187,10 @@ clock10MHz: process(clk20_in) begin
     clk_int <= not clk_int;
   end if;
 end process clock10MHz;
-clk <= clk_in when c_extclk(0) = '1' else clk_int;
+clk <= clk_in when c_extclk = '1' else clk_int;
 
-trigger    <= c_trig(0) or trig_in;
-power_down <= c_extclk(0);
+trigger    <= c_trig or trig_in;
+power_down <= c_extclk;
 ---- BRAM
 bram_clka   <= clk_axi_in;
 bram_rsta   <= '0';
@@ -206,20 +217,22 @@ bram_clkb  <= clk;
 bram_addrb <= std_logic_vector(s_addr);
 ---- translate DOUT states
 output: for i in 2 to 7 generate
-  state_do(i) <= not gate when (c_invert(i) and     c_gate(i)) = '1'
-            else not sig  when (c_invert(i) and not c_gate(i)) = '1'
-            else sig      when (c_invert(i) or      c_gate(i)) = '0'
-            else gate;
+  state_do(i) <= not gate  when (    cc_invert(i) and     cc_gate(i) and not cc_gate2(i)) = '1'
+            else not sig   when (    cc_invert(i) and not cc_gate(i) and not cc_gate2(i)) = '1'
+            else gate      when (not cc_invert(i) and     cc_gate(i) and not cc_gate2(i)) = '1'
+            else sig       when (not cc_invert(i) and not cc_gate(i) and not cc_gate2(i)) = '1'
+            else not gate2 when (    cc_invert(i) and                        cc_gate2(i)) = '1'
+            else gate2;
+            
 end generate output;
-
 ---- translate LED states
 state_led(0) <= not trigger;
 state_led(1) <= clk;
 state_led(2) <= sig;--sig
-state_led(3) <= gate;--gate
-state_led(4) <= c_init(0);
-state_led(5) <= c_reinit(0);
-state_led(6) <= c_extclk(0);
+state_led(3) <= gate2 when cc_gate2(2) = '1' else gate;--gate
+state_led(4) <= (c_arm and not c_rearm) or c_reinit;
+state_led(5) <= c_rearm;
+state_led(6) <= c_extclk;
 state_led(7) <= not state(0);--error/not ok
 
 ----DATA_BUF
@@ -237,16 +250,22 @@ begin
     -- handle fpga write operations
     state_buf <= state;
     if armed = '0' then
-      c_trig <= (others => '0');
-    elsif c_reinit(0) = '1' then
+      if (c_trig = '1' and c_rearm ='0') then
+        c_arm <= '0';
+      end if;
+      cc_trig <= (others => '0');
+      if (c_arm = '0' and  running = '0') then
+        c_on <= '0';
+      end if;
+    elsif c_reinit = '1' then
       head_buf <= head_save;
     end if;
     if ok = '1' then
-      c_clear <= (others => '0');
+      cc_clear <= (others => '0');
     end if;
-    if c_save(0) = '1' then
+    if c_save = '1' then
       head_save <= head_buf;
-      c_save <= (others => '0');
+      cc_save <= (others => '0');
     end if;
   end if;
 end process update_buffer;
@@ -297,13 +316,14 @@ w7x_timing_inst : w7x_timing
         HEAD_COUNT => HEAD_COUNT
     )
     port map (
-       clk_in        => clk,
-       trigger_in    => trigger,
-       armed_in      => c_init(0),
-       clear_in      => c_clear(0),
-       index_out     => s_addr,
-       state_out     => state,
-       head_in       => head_buf,
-       sample_in     => bram_doutb
+       clk_in      => clk,
+       trigger_in  => trigger,
+       on_in       => c_on,
+       armed_in    => c_arm,
+       clear_in    => c_clear,
+       index_out   => s_addr,
+       state_out   => state,
+       head_in     => head_buf,
+       sample_in   => bram_doutb
       );
 end arch_imp;

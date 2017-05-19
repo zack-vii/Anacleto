@@ -256,19 +256,14 @@ int trig() {
 
 int reinit(uint64_t *delay_p) {
     INIT_DEVICE
-    if (delay_p) {
-      dev->w_init   =  0;
-      makeClock(delay_p,NULL,NULL,NULL,NULL,NULL);
-      nanosleep(&t,0);
-      dev->w_save   = -1;
-      nanosleep(&t,0);
-      dev->w_clear  = -1;
-      dev->w_reinit = -1;
-      dev->w_init   = -1;
-    } else {
-      dev->w_reinit =  0;
-      dev->w_init   =  0;
-    }
+    dev->w_init   =  0;
+    int status = makeClock(delay_p,NULL,NULL,NULL,NULL,NULL);
+    if (status != C_OK) return status;
+    nanosleep(&t,0);
+    dev->w_save   = -1;
+    nanosleep(&t,0);
+    dev->w_clear  = -1;
+    dev->w_init   = INIT_REINIT;
     return C_OK;
 }
 
@@ -284,6 +279,12 @@ int gate(uint8_t val) {
     return C_OK;
 }
 
+int gate2(uint8_t val) {
+    INIT_DEVICE
+    dev->w_gate2 = val;
+    return C_OK;
+}
+
 int extclk(int val) {
     INIT_DEVICE
     dev->w_extclk = val ? -1 : 0;
@@ -294,7 +295,15 @@ int arm() {
     int i;
     INIT_DEVICE
     dev->w_clear = -1;
-    dev->w_init  = -1;
+    dev->w_init  = INIT_ARM;
+    return C_OK;
+}
+
+int rearm() {
+    int i;
+    INIT_DEVICE
+    dev->w_clear = -1;
+    dev->w_init  = INIT_REARM;
     return C_OK;
 }
 
@@ -303,4 +312,3 @@ int disarm() {
     dev->w_init = 0;
     return C_OK;
 }
-

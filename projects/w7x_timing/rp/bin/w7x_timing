@@ -45,7 +45,7 @@ class w7x_timing(object):
             self.cdll = _c.CDLL('libw7x_timing_lib.so')
             self.cdll.getError.restype=_c.c_void_p
             self._error = _c.cast(self.cdll.getError(),_c.c_char_p)
-            self.tryExt()
+            if self.state == STATE_IDLE[1]: self.tryExt()
         except OSError as exc:
             print('w7x_timing: '+ str(exc))
             raise
@@ -64,6 +64,8 @@ class w7x_timing(object):
         return hasext
     def arm(self):
         self.cdll.arm()
+    def rearm(self):
+        self.cdll.rearm()
     def disarm(self):
         self.cdll.disarm()
     def makeClock(self,delay=None,width=None,period=None,burst=None,cycle=None,repeat=None):
@@ -87,6 +89,9 @@ class w7x_timing(object):
     def gate(self,value=0):
         value = _c.c_uint8(w7x_timing._tobyte(value))
         self.cdll.gate(value)
+    def gate2(self,value=0):
+        value = _c.c_uint8(w7x_timing._tobyte(value))
+        self.cdll.gate2(value)
     def invert(self,value=0):
         value = _c.c_uint8(w7x_timing._tobyte(value))
         self.cdll.invert(value)
@@ -117,11 +122,16 @@ class w7x_timing(object):
         except _s.error as msg:
             print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
             return
+        try:
+            sock.listen(5)
+        except _s.error as msg:
+            print 'Listen failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+            return
         while True:
             try:
-                sock.listen(10)
                 conn, addr = sock.accept()
                 print('%s: Connection established'%(addr[0],))
+                conn.settimeout(10)
                 while True:
                     try:
                         head = conn.recv(7)
@@ -148,6 +158,10 @@ class w7x_timing(object):
                             self.reinit([(None if p<0 else p) for p in _p.unpack('<q',param[:8])][0])
                         elif cmd == 'A':
                             self.arm()
+                        elif cmd == 'R':
+                            self.rearm()
+                        elif cmd == 'X':
+                            self.reinit([(None if p<0 else p) for p in _p.unpack('<q',param[:8])][0])
                         elif cmd == 'D':
                             self.disarm()
                         elif cmd == 'T':
@@ -156,6 +170,8 @@ class w7x_timing(object):
                             self.extclk(_p.unpack('<b',param[0])[0])
                         elif cmd == 'G':
                             self.gate(_p.unpack('<b',param[0])[0])
+                        elif cmd == 'H':
+                            self.gate2(_p.unpack('<b',param[0])[0])
                         elif cmd == 'I':
                             self.invert(_p.unpack('<b',param[0])[0])
                         elif cmd == 's':
@@ -185,7 +201,7 @@ class w7x_timing(object):
                 print(e)
 
 """ REMOTE CONNECTION """
-
+"""CSARXDTEGIspe"""
 class remote(object):
     @staticmethod
     def _makeMsg(prog,form,length,*args):
@@ -208,11 +224,14 @@ class remote(object):
         length = len(times)+44
         msg = remote._makeMsg('S','<qqqqql',length,int(delay),int(width),int(period),int(burst),int(cycle),int(repeat))+times
         return self._exchange(msg)
-    def reinit(self,default_delay=-1):
-        msg = remote._makeMsg('R','<q',8,default_delay)
-        return self._exchange(msg)
     def arm(self):
         msg = remote._makeMsg('A','',0)
+        return self._exchange(msg)
+    def rearm(self):
+        msg = remote._makeMsg('R','',0)
+        return self._exchange(msg)
+    def reinit(self,default_delay=-1):
+        msg = remote._makeMsg('X','<q',8,default_delay)
         return self._exchange(msg)
     def disarm(self):
         msg = remote._makeMsg('D','',0)
@@ -225,6 +244,9 @@ class remote(object):
         return self._exchange(msg)
     def gate(self,val=0):
         msg = remote._makeMsg('G','<B',1,w7x_timing._tobyte(val))
+        return self._exchange(msg)
+    def gate2(self,val=0):
+        msg = remote._makeMsg('H','<B',1,w7x_timing._tobyte(val))
         return self._exchange(msg)
     def invert(self,val=0):
         msg = remote._makeMsg('I','<B',1,w7x_timing._tobyte(val))
@@ -265,15 +287,18 @@ class Test(_u.TestCase):
         dev.trig()
         self.assertEqual(dev.state,STATE_DELAY[1])
         time.sleep(1)
-        self.assertEqual(dev.state,STATE_ARMED[1])
-        dev.disarm()
         self.assertEqual(dev.state,STATE_IDLE[1])
     def runTest(self):
         self.connect()
 
-def test():
+def test(hostname=None):
+    import os
+    if hostname is None:
+        Test._host = os.getenv('RedPitaya','localhost')
+    else:
+        Test._host = hostname
     suite=_u.TestSuite((Test('connect'),))
-    tr=_u.TextTestRunner()
+    tr=_u.TextTestRunner(stream=os.sys.stderr)
     tr.run(suite)
 
 """ EXECUTION """

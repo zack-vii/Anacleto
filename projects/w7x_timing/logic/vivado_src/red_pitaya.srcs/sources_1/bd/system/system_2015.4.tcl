@@ -170,7 +170,6 @@ CONFIG.Read_Width_A {40} \
 CONFIG.Read_Width_B {40} \
 CONFIG.Register_PortA_Output_of_Memory_Primitives {false} \
 CONFIG.Register_PortB_Output_of_Memory_Primitives {false} \
-CONFIG.Remaining_Memory_Locations {0} \
 CONFIG.Use_Byte_Write_Enable {false} \
 CONFIG.Use_RSTA_Pin {false} \
 CONFIG.Use_RSTB_Pin {false} \
