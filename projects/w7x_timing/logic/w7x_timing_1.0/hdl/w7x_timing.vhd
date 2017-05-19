@@ -12,6 +12,7 @@ entity w7x_timing is
     port (
        clk_in     : in  STD_LOGIC;
        trigger_in : in  STD_LOGIC;
+       on_in      : in  STD_LOGIC;
        armed_in   : in  STD_LOGIC;
        clear_in   : in  STD_LOGIC;
        head_in    : in  STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
@@ -79,7 +80,7 @@ begin
       sample_total <= unsigned(head_in(5*DATA_WIDTH+ADDR_WIDTH+31 downto 5*DATA_WIDTH+32));
     end if;
   end process buffer_input;
-  clock_gen:  process(clk_in, armed_in, trigger_in, clear_in, 
+  clock_gen:  process(clk_in, on_in, armed_in, trigger_in, clear_in, 
                       delay_total, high_total, period_total,
                       cycle_total, repeat_total,
                       sample_total, sample) is
@@ -123,7 +124,11 @@ begin
 
     procedure do_rearm is
     begin
-      start_armed;
+      if armed_in = '1' then
+        start_armed;
+      else
+        state <= IDLE;
+      end if;
     end do_rearm;        
     
     procedure do_error(cstat : std_logic_vector(7 downto 0)) is
@@ -267,7 +272,7 @@ begin
       if error(8+1) = '0' then
         error(DATA_WIDTH-1 downto 24) <= std_logic_vector(cycle_ticks);
       end if;
-      if armed_in = '0' then
+      if on_in = '0' then
         state <= IDLE;
       else
         case state is
@@ -286,7 +291,7 @@ begin
           when WAITING_REPEAT =>
             do_waiting_repeat;
           when IDLE =>
-            do_rearm;
+            start_armed;
           when others =>
             do_error(IDLE);
         end case;

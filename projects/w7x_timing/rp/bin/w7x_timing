@@ -45,7 +45,7 @@ class w7x_timing(object):
             self.cdll = _c.CDLL('libw7x_timing_lib.so')
             self.cdll.getError.restype=_c.c_void_p
             self._error = _c.cast(self.cdll.getError(),_c.c_char_p)
-            self.tryExt()
+            if self.state == STATE_IDLE[1]: self.tryExt()
         except OSError as exc:
             print('w7x_timing: '+ str(exc))
             raise
@@ -64,6 +64,8 @@ class w7x_timing(object):
         return hasext
     def arm(self):
         self.cdll.arm()
+    def rearm(self):
+        self.cdll.rearm()
     def disarm(self):
         self.cdll.disarm()
     def makeClock(self,delay=None,width=None,period=None,burst=None,cycle=None,repeat=None):
@@ -87,6 +89,9 @@ class w7x_timing(object):
     def gate(self,value=0):
         value = _c.c_uint8(w7x_timing._tobyte(value))
         self.cdll.gate(value)
+    def gate2(self,value=0):
+        value = _c.c_uint8(w7x_timing._tobyte(value))
+        self.cdll.gate2(value)
     def invert(self,value=0):
         value = _c.c_uint8(w7x_timing._tobyte(value))
         self.cdll.invert(value)
@@ -117,11 +122,16 @@ class w7x_timing(object):
         except _s.error as msg:
             print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
             return
+        try:
+            sock.listen(5)
+        except _s.error as msg:
+            print 'Listen failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+            return
         while True:
             try:
-                sock.listen(10)
                 conn, addr = sock.accept()
                 print('%s: Connection established'%(addr[0],))
+                conn.settimeout(10)
                 while True:
                     try:
                         head = conn.recv(7)
@@ -144,10 +154,12 @@ class w7x_timing(object):
                             args = tuple((None if p<0 else p) for p in _p.unpack('<qqqqql',param[:44]))
                             times = _n.fromstring(param[44:length],_n.uint64)
                             self.makeSequence(*args,times=times)
-                        elif cmd == 'R':
-                            self.reinit([(None if p<0 else p) for p in _p.unpack('<q',param[:8])][0])
                         elif cmd == 'A':
                             self.arm()
+                        elif cmd == 'R':
+                            self.rearm()
+                        elif cmd == 'X':
+                            self.reinit([(None if p<0 else p) for p in _p.unpack('<q',param[:8])][0])
                         elif cmd == 'D':
                             self.disarm()
                         elif cmd == 'T':
@@ -156,6 +168,8 @@ class w7x_timing(object):
                             self.extclk(_p.unpack('<b',param[0])[0])
                         elif cmd == 'G':
                             self.gate(_p.unpack('<b',param[0])[0])
+                        elif cmd == 'H':
+                            self.gate2(_p.unpack('<b',param[0])[0])
                         elif cmd == 'I':
                             self.invert(_p.unpack('<b',param[0])[0])
                         elif cmd == 's':
@@ -184,96 +198,44 @@ class w7x_timing(object):
             except Exception as e:
                 print(e)
 
-""" REMOTE CONNECTION """
-
-class remote(object):
-    @staticmethod
-    def _makeMsg(prog,form,length,*args):
-        return 'W7X'+_p.pack('<L',length)+prog[0]+_p.pack(form,*args)
-    def __init__(self,address):
-        self.connect(address)
-    def connect(self,address):
-        self.sock = _s.socket(_s.AF_INET, _s.SOCK_STREAM)
-        self.sock.connect(address)
-    def _exchange(self,msg):
-        self.sock.send(msg)
-        length = _p.unpack('<L',self.sock.recv(4))[0]
-        if length>0:
-            return self.sock.recv(length+255)
-    def makeClock(self,delay=-1,width=-1,period=-1,burst=-1,cycle=-1,repeat=-1):
-        msg = remote._makeMsg('C','<qqqqql',44,int(delay),int(width),int(period),int(burst),int(cycle),int(repeat))
-        return self._exchange(msg)
-    def makeSequence(self,delay=-1,width=-1,period=-1,burst=-1,cycle=-1,repeat=-1,times=-1):
-        times = _n.array(times,_n.int64).tostring()
-        length = len(times)+44
-        msg = remote._makeMsg('S','<qqqqql',length,int(delay),int(width),int(period),int(burst),int(cycle),int(repeat))+times
-        return self._exchange(msg)
-    def reinit(self,default_delay=-1):
-        msg = remote._makeMsg('R','<q',8,default_delay)
-        return self._exchange(msg)
-    def arm(self):
-        msg = remote._makeMsg('A','',0)
-        return self._exchange(msg)
-    def disarm(self):
-        msg = remote._makeMsg('D','',0)
-        return self._exchange(msg)
-    def trig(self):
-        msg = remote._makeMsg('T','',0)
-        return self._exchange(msg)
-    def extclk(self,value=True):
-        msg = remote._makeMsg('E','<b',1,-1 if value else 0)
-        return self._exchange(msg)
-    def gate(self,val=0):
-        msg = remote._makeMsg('G','<B',1,w7x_timing._tobyte(val))
-        return self._exchange(msg)
-    def invert(self,val=0):
-        msg = remote._makeMsg('I','<B',1,w7x_timing._tobyte(val))
-        return self._exchange(msg)
-    @property
-    def state(self):
-        self.sock.send(remote._makeMsg('s','',0))
-        return _p.unpack('<L',self.sock.recv(4))[0]
-    @property
-    def params(self):
-        self.sock.send(remote._makeMsg('p','',0))
-        return _p.unpack('<qqqqqll',self.sock.recv(48))
-    @property
-    def error(self):
-        msg = remote._makeMsg('e','',0)
-        return int(self._exchange(msg))
-
 """ UNIT TEST """
 
 import unittest as _u
+import time as _t
 class Test(_u.TestCase):
-    def connect(self):
-        import time
+    def local(self):
         dev = w7x_timing()
-        dev.reinit(6e8),
+        dev.disarm();
+        dev.reinit(),
         self.assertEqual(dev.error.strip(),"MAKE CLOCK: DELAY: 600000000, WIDTH: 5, PERIOD: 10, BURST: 0, CYCLE: 0, REPEAT: 0, COUNT: 1")
-        dev.reinit();
+        _t.sleep(.1)
+        dev.disarm();
         dev.makeClock(cycle=10000000,burst=1000,repeat=5)
         self.assertEqual(dev.error.strip(),"MAKE CLOCK: DELAY: 0, WIDTH: 5, PERIOD: 10, BURST: 1000, CYCLE: 10000000, REPEAT: 5, COUNT: 1")
         self.assertEqual(dev.params,(0,5,10,1000,10000000,5,1))
-        dev.makeSequence(1e6,5,10,100,1e6,3,[0,1e4,4e4,5e4,6e4])
-        self.assertEqual(dev.error.strip(),"MAKE SEQUENCE: TIMES: [0, 10000, 40000, 50000, 60000],\nDELAY: 1000000, WIDTH: 5, PERIOD: 10, BURST: 100, CYCLE: 1000000, REPEAT: 3, COUNT: 5")
+        dev.makeSequence(1e6,5,10,100,1e6,3,[0,2e4,4e4,5e4,7e4,1e5])
+        self.assertEqual(dev.error.strip(),"MAKE SEQUENCE: TIMES: [0, 20000, 40000, 50000, 70000, 100000],\nDELAY: 1000000, WIDTH: 5, PERIOD: 10, BURST: 100, CYCLE: 1000000, REPEAT: 3, COUNT: 6")
         dev.gate([2,4])
-        dev.invert([4,5])
+        dev.gate2([5])
+        dev.invert([3,4])
         self.assertEqual(dev.state,STATE_IDLE[1])
         dev.arm()
         self.assertEqual(dev.state,STATE_ARMED[1])
+        dev.rearm()
+        self.assertEqual(dev.state,STATE_ARMED[1])
         dev.trig()
         self.assertEqual(dev.state,STATE_DELAY[1])
-        time.sleep(1)
+        _t.sleep(1)
         self.assertEqual(dev.state,STATE_ARMED[1])
         dev.disarm()
         self.assertEqual(dev.state,STATE_IDLE[1])
     def runTest(self):
-        self.connect()
+        self.local()
 
 def test():
-    suite=_u.TestSuite((Test('connect'),))
-    tr=_u.TextTestRunner()
+    import os
+    suite=_u.TestSuite((Test('local'),))
+    tr=_u.TextTestRunner(stream=os.sys.stderr)
     tr.run(suite)
 
 """ EXECUTION """
