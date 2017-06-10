@@ -195,7 +195,11 @@ class remote(object):
     @property
     def state(self):
         self.sock.send(remote._makeMsg('s','',0))
-        return _p.unpack('<L',self.sock.recv(4))[0]
+        return _p.unpack('<B',self.sock.recv(1))[0]
+    @property
+    def control(self):
+        self.sock.send(remote._makeMsg('c','',0))
+        return _p.unpack('<BBBBBBBB',self.sock.recv(8))
     @property
     def params(self):
         self.sock.send(remote._makeMsg('p','',0))

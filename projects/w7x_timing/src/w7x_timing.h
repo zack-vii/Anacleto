@@ -29,10 +29,10 @@ extern "C" {
 #define W7X_TIMING_IOCTL_BASE	'W'
 #define W7X_TIMING_RESOFFSET _IO(W7X_TIMING_IOCTL_BASE, 0)
 
-#define INIT_ON     0x1
-#define INIT_ARM    0x3 // + INIT_ON
-#define INIT_REARM  0x7 // + INIT_ARM
-#define INIT_REINIT 0x15// + INIT_REARM
+#define INIT_ON     1
+#define INIT_ARM    3 // + INIT_ON
+#define INIT_REARM  7 // + INIT_ARM
+#define INIT_REINIT 15// + INIT_REARM
 
 typedef unsigned char        uint8_t;
 typedef unsigned short       uint16_t;

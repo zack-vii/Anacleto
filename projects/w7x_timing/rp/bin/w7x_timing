@@ -1,7 +1,9 @@
 #!/usr/bin/python2
 import ctypes as _c
-import numpy as _n,socket as _s, struct as _p
-
+import numpy as _n
+import socket as _s
+import struct as _p
+import threading as _t
 """ STATE CONSTANTS """
 
 # state[0]:error, state[1]:ok
@@ -13,9 +15,68 @@ STATE_LOW    = [ 82, 83]
 STATE_HIGH   = [210,211]
 STATE_REPEAT = [ 50, 51]
 
+INIT_DISARM  = 0
+INIT_ON      = 1
+INIT_ARM     = 3
+INIT_REARM   = 7
+INIT_REINIT  = 15
+MAX_STATUS   = 8
+MAX_SAMPLES  = 54272
+class struct_w7x_timing(object):
+    class _Device(_c.Structure):
+        _fields_=[
+              ("status",_c.c_ubyte*MAX_STATUS),
+              ("init",_c.c_ubyte),
+              ("trig",_c.c_ubyte),
+              ("clear",_c.c_ubyte),
+              ("save",_c.c_ubyte),
+              ("extclk",_c.c_ubyte),
+              ("invert",_c.c_ubyte),
+              ("gate",_c.c_ubyte),
+              ("gate2",_c.c_ubyte),
+              ("delay",_c.c_uint64),
+              ("width",_c.c_uint64),
+              ("period",_c.c_uint64),
+              ("burst",_c.c_uint64),
+              ("cycle",_c.c_uint64),
+              ("repeat",_c.c_uint32),
+              ("count",_c.c_uint32),
+              ("times",_c.c_uint64*MAX_SAMPLES),
+             ]
+    class _Sections(_c.Structure):
+        _fields_=[
+              ("status",_c.c_ubyte*MAX_STATUS),
+              ("control",_c.c_ubyte*8),
+              ("header",_c.c_ubyte*(6*8)),
+              ("times",_c.c_uint64*MAX_SAMPLES),
+             ]
+    def __init__(self,iface):
+        self.ptr = _c.c_void_p(0)
+        iface.cdll.get_w7x_timing(_c.byref(self.ptr))
+    @property
+    def device(self):   return _c.cast(self.ptr,_c.POINTER(struct_w7x_timing._Device)).contents
+    @property
+    def sections(self): return _c.cast(self.ptr,_c.POINTER(struct_w7x_timing._Sections)).contents
+    @property
+    def status(self):   return tuple(self.sections.status)
+    @property
+    def control(self):  return tuple(self.sections.control)
+    @property
+    def header(self):
+        d = self.device
+        return (d.delay,d.width,d.period,d.burst,d.cycle,d.repeat,d.count)
+    @property
+    def times(self):
+        d = self.device
+        return d.times[0:d.count]
+    def __str__(self):
+        return "w7x_timing"+str(d.header)
+    def __repr__(self): return str(self)
+
 """ SERVER INTERFACE """
 
 class w7x_timing(object):
+    _lock = _t.Lock()
     _NULL = _c.c_void_p(None)
     @staticmethod
     def _tobyte(val):
@@ -39,12 +100,13 @@ class w7x_timing(object):
     @staticmethod
     def _byref(*args):
         return tuple((w7x_timing._NULL if a is None else _c.byref(a)) for a in args)
-
     def __init__(self):
+        self._stop = False
         try:
             self.cdll = _c.CDLL('libw7x_timing_lib.so')
             self.cdll.getError.restype=_c.c_void_p
             self._error = _c.cast(self.cdll.getError(),_c.c_char_p)
+            self.dev = struct_w7x_timing(self)
             if self.state == STATE_IDLE[1]: self.tryExt()
         except OSError as exc:
             print('w7x_timing: '+ str(exc))
@@ -87,14 +149,14 @@ class w7x_timing(object):
     def extclk(self,value):
         self.cdll.extclk(_c.c_int8(-1) if value else _c.c_int8(0))
     def gate(self,value=0):
-        value = _c.c_uint8(w7x_timing._tobyte(value))
-        self.cdll.gate(value)
+        value = w7x_timing._tobyte(value)
+        self.cdll.gate(_c.c_uint8(value))
     def gate2(self,value=0):
-        value = _c.c_uint8(w7x_timing._tobyte(value))
-        self.cdll.gate2(value)
+        value = w7x_timing._tobyte(value)
+        self.cdll.gate2(_c.c_uint8(value))
     def invert(self,value=0):
-        value = _c.c_uint8(w7x_timing._tobyte(value))
-        self.cdll.invert(value)
+        value = w7x_timing._tobyte(value)
+        self.cdll.invert(_c.c_uint8(value))
     @property
     def error(self):
         return str(self._error.value)
@@ -107,108 +169,169 @@ class w7x_timing(object):
         refs = w7x_timing._byref(*args)
         self.cdll.getParams(*refs)
         return tuple(int(a.value) for a in args)
-
+    def stop(self): self._stop = True
     def run(self,port):
-        def senderror(conn):
-            msg = str(self.error)
-            conn.send(_p.pack('<L',len(msg))+msg)
         try: #create an AF_INET, STREAM socket (TCP)
             sock = _s.socket(_s.AF_INET, _s.SOCK_STREAM)
         except _s.error as msg:
-            print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1]
+            print 'Failed to create socket (%d): %s'%(msg[0],msg[1])
             return
         try:
             sock.bind(('', int(port)))
         except _s.error as msg:
-            print 'Bind failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+            print 'Bind failed (%d): %s'%(msg[0],msg[1])
             return
         try:
             sock.listen(5)
         except _s.error as msg:
-            print 'Listen failed. Error Code : ' + str(msg[0]) + ' Message ' + msg[1]
+            print 'Listen failed (%d): %s'%(msg[0],msg[1])
             return
-        while True:
+        self.logger = w7x_timing.Logger(port+1,self)
+        self.logger.start()
+        try:
+            while not self._stop:
+                try:
+                    conn, addr = sock.accept()
+                    w7x_timing.Handler(conn,addr,self).start()
+                except KeyboardInterrupt:
+                    raise
+                except Exception as e:
+                    print(e)
+        finally:
+            sock.close()
+            with w7x_timing._lock:
+                handlers = list(w7x_timing.Handler._set)
+            for handler in handlers:
+                handler.stop()
+            self.logger.stop()
+            for handler in handlers:
+                handler.join()
+            self.logger.join()
+
+    class Logger(_t.Thread):
+        def __init__(self,port,iface):
+            super(w7x_timing.Logger,self).__init__(name='logger:%d'%(port,))
+            self.port = port
+            self.iface = iface
+            self._stop = False
+            try: #create an AF_INET, DGRAM socket (UDP)
+                self.sock = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
+            except _s.error as msg:
+                print('Logger socket init failed (%d): %s'%(msg[0],msg[1]))
+                raise
+        def send_control(self,control):
             try:
-                conn, addr = sock.accept()
-                print('%s: Connection established'%(addr[0],))
-                conn.settimeout(10)
-                while True:
+                self.sock.sendto(_p.pack('<BBBBBBBB',*control),('',self.port))
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                print(e)
+        def stop(self): self._stop = True
+        def run(self):
+            from time import sleep
+            old_control = (0,0,0,0,0,0,0,0)
+            try:
+                while not self._stop:
+                    sleep(.01)
+                    control = self.iface.dev.control
+                    if not control == old_control:
+                        old_control = control
+                        self.send_control(control)
+            finally:
+                sock.close()
+
+    class Handler(_t.Thread):
+        _set = set()
+        def __init__(self,conn,addr,iface):
+            super(w7x_timing.Handler,self).__init__(name='%s:%d'%addr)
+            conn.settimeout(10)
+            self.conn = conn
+            self.iface = iface
+            self._stop = False
+            with w7x_timing._lock:
+                w7x_timing.Handler._set.add(self)
+        def stop(self): self._stop = True
+        def senderror(self):
+            msg = str(self.iface.error)
+            self.conn.send(_p.pack('<L',len(msg))+msg)
+        def run(self):
+            try:
+                print('%s : Connection established'%self.name)
+                while not self._stop:
                     try:
-                        head = conn.recv(7)
+                      head = self.conn.recv(7)
+                      with w7x_timing._lock:
                         if not head.startswith('W7X'):
                             if len(head)>0:
-                                raise Exception('%s: Invalid header "%s"'%(addr[0],head))
-                            raise Exception('%s: Connection closed'%(addr[0],))
+                                raise Exception('Invalid header "%s"'%(head,))
+                            raise Exception('Connection closed')
                         length = _p.unpack('<L',head[3:])[0]
                         remaining = length+1
                         cmd = []
                         while remaining>0:
-                            cmd.append(conn.recv(remaining+256))
+                            cmd.append(self.conn.recv(remaining+256))
                             remaining-= len(cmd[-1])
                         cmd = ''.join(cmd)
                         cmd,param = cmd[0],cmd[1:]
                         if   cmd == 'C':
                             param = tuple((None if p<0 else p) for p in _p.unpack('<qqqqql',param[:44]))
-                            self.makeClock(*param)
+                            self.iface.makeClock(*param)
                         elif cmd == 'S':
                             args = tuple((None if p<0 else p) for p in _p.unpack('<qqqqql',param[:44]))
                             times = _n.fromstring(param[44:length],_n.uint64)
-                            self.makeSequence(*args,times=times)
+                            self.iface.makeSequence(*args,times=times)
                         elif cmd == 'A':
-                            self.arm()
+                            self.iface.arm()
                         elif cmd == 'R':
-                            self.rearm()
+                            self.iface.rearm()
                         elif cmd == 'X':
-                            self.reinit([(None if p<0 else p) for p in _p.unpack('<q',param[:8])][0])
+                            self.iface.reinit([(None if p<0 else p) for p in _p.unpack('<q',param[:8])][0])
                         elif cmd == 'D':
-                            self.disarm()
+                            self.iface.disarm()
                         elif cmd == 'T':
-                            self.trig()
+                            self.iface.trig()
                         elif cmd == 'E':
-                            self.extclk(_p.unpack('<b',param[0])[0])
+                            self.iface.extclk(_p.unpack('<b',param[0])[0])
                         elif cmd == 'G':
-                            self.gate(_p.unpack('<b',param[0])[0])
+                            self.iface.gate(_p.unpack('<b',param[0])[0])
                         elif cmd == 'H':
-                            self.gate2(_p.unpack('<b',param[0])[0])
+                            self.iface.gate2(_p.unpack('<b',param[0])[0])
                         elif cmd == 'I':
-                            self.invert(_p.unpack('<b',param[0])[0])
+                            self.iface.invert(_p.unpack('<b',param[0])[0])
                         elif cmd == 's':
-                            conn.send(_p.pack('<L',self.state))
+                            self.conn.send(_p.pack('<B',self.iface.state))
                             continue
                         elif cmd == 'p':
-                            conn.send(_p.pack('<qqqqqll',*self.params))
+                            self.conn.send(_p.pack('<qqqqqll',*self.iface.params))
                             continue
                         elif cmd == 'e':
                             pass #only return error
                         else:
-                            raise Exception('%s: Invalid command "%s"'%(addr[0],cmd))
-                        senderror(conn)
+                            raise Exception('Invalid command "%s"'%(cmd,))
+                        self.senderror()
                     except KeyboardInterrupt:
-                        conn.close()
-                        del(conn)
                         raise
                     except Exception as e:
-                        print(e)
-                        conn.close()
-                        del(conn)
+                        print('%s : %s'%(self.name,str(e)))
                         break
-            except KeyboardInterrupt:
-                sock.close()
-                raise
-            except Exception as e:
-                print(e)
+            finally:
+                self.conn.close()
+                del(self.conn)
+                with w7x_timing._lock:
+                    w7x_timing.Handler._set.remove(self)
+
 
 """ UNIT TEST """
 
 import unittest as _u
-import time as _t
 class Test(_u.TestCase):
     def local(self):
+        from time import sleep
         dev = w7x_timing()
         dev.disarm();
         dev.reinit(),
         self.assertEqual(dev.error.strip(),"MAKE CLOCK: DELAY: 600000000, WIDTH: 5, PERIOD: 10, BURST: 0, CYCLE: 0, REPEAT: 0, COUNT: 1")
-        _t.sleep(.1)
+        sleep(.1)
         dev.disarm();
         dev.makeClock(cycle=10000000,burst=1000,repeat=5)
         self.assertEqual(dev.error.strip(),"MAKE CLOCK: DELAY: 0, WIDTH: 5, PERIOD: 10, BURST: 1000, CYCLE: 10000000, REPEAT: 5, COUNT: 1")
@@ -225,7 +348,7 @@ class Test(_u.TestCase):
         self.assertEqual(dev.state,STATE_ARMED[1])
         dev.trig()
         self.assertEqual(dev.state,STATE_DELAY[1])
-        _t.sleep(1)
+        sleep(1)
         self.assertEqual(dev.state,STATE_ARMED[1])
         dev.disarm()
         self.assertEqual(dev.state,STATE_IDLE[1])

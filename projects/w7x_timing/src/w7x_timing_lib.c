@@ -1,5 +1,6 @@
 #include <string.h>
 #include <time.h>
+#include <pthread.h>
 #include "w7x_timing.h"
 
 #define DEFAULT_DELAY 600000000 //60s
@@ -33,19 +34,39 @@ static char error[1024];
   *error = 0; \
   int pos = 0; \
   if (getDev(&pos)){ \
-    printf(error); \
+    fprintf(stderr,error); \
     return C_DEV_ERROR; \
   }
 
 
-struct w7x_timing *dev = NULL;
+
+static pthread_mutex_t dev_lock = PTHREAD_MUTEX_INITIALIZER;
+static struct w7x_timing *dev = NULL;
 
 int getDev(int *pos) {
-    if (dev) return C_OK;
+  int c_sts = C_OK;
+  pthread_mutex_lock(&dev_lock);
+  if (!dev) {
     dev = w7x_timing_get_device(0);
-    if (dev) return C_OK;
-    *pos += sprintf(error+*pos, "ERROR: unable to get device\n");
+    if (!dev) {
+      *pos += sprintf(error+*pos, "ERROR: unable to get device\n");
+      c_sts = C_DEV_ERROR;
+    }
+  }
+  pthread_mutex_unlock(&dev_lock);
+  return c_sts;
+}
+
+int get_w7x_timing(struct w7x_timing **dev_p){
+  *error = 0;
+  int pos = 0;
+  if (getDev(&pos)){
+    fprintf(stderr,error);
+    dev_p = NULL;
     return C_DEV_ERROR;
+  }
+  *dev_p = dev;
+  return C_OK;
 }
 
 uint64_t _getClock() {
@@ -190,7 +211,7 @@ int makeClock(const uint64_t *delay_p, const uint64_t *width_p, const uint64_t *
       cycle = *cycle_p;
       if (cycle < period * burst){
         pos += sprintf(error+pos,"ERROR: CYCLE < PERIOD * BURST\n");
-        printf(error);
+        fprintf(stderr,error);
         return C_PARAM_ERROR;
       }
     } else
@@ -207,14 +228,14 @@ int makeSequence(const uint64_t *delay_p, const uint64_t *width_p, const uint64_
     int pos = sprintf(error,"MAKE SEQUENCE: ");
     if (!times || !count_p) {
       pos += sprintf(error+pos,"ERROR: TIMES = NULL");
-      printf(error);
+      fprintf(stderr,error);
       return C_PARAM_ERROR;
     }
     uint32_t count = *count_p;
     CHECK_INPUTS
     if (count < 1) {
       pos += sprintf(error+pos,"ERROR: COUNT < 1\n");
-      printf(error);
+      fprintf(stderr,error);
       return C_PARAM_ERROR;
     }
     uint64_t periodxburst = period*burst;
@@ -223,7 +244,7 @@ int makeSequence(const uint64_t *delay_p, const uint64_t *width_p, const uint64_
       if (cycle < times[count-1] + periodxburst){
         pos += sprintf(error+pos,"ERROR: CYCLE < TIMES[end] + PERIOD x BURST\n");
         pos += sprintf(error+pos,"       TIMES[end]: %llu\n", times[count-1]);
-        printf(error);
+        fprintf(stderr,error);
         return C_PARAM_ERROR;
       }
     } else
@@ -235,7 +256,7 @@ int makeSequence(const uint64_t *delay_p, const uint64_t *width_p, const uint64_
        if (i == 16) pos += sprintf(error+pos,", ...");
        if(times[i] < times[i-1] + periodxburst) {
          pos += sprintf(error+pos,"\nERROR: TIMES[%ld] - TIMES[%ld] < PERIOD x BURST\n",i,i-1);
-         printf(error);
+         fprintf(stderr,error);
        return C_PARAM_ERROR;
        }
     }
