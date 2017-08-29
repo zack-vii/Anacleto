@@ -109,11 +109,11 @@ address&name&type&description\\\hline
 0x0008&INIT&bool&Used to arm the device or abort an executed program.\\
 0x0009&TRIG&bool&Used to software trigger the device.\\
 0x000A&CLEAR&bool&Used to clear error from the status register.\\
-0x000B&REINIT&bool&Set if device in reinit mode.\\
-0x000C&SAVE&bool&Used to set up reinit mode.\\
-0x000D&EXTCLK&bool&Controls clock source: 0:internal (10Mhz), 1:external.\\
-0x000E&INVERT&byte&Stores bit information of channels that are set for inverted output.\\
-0x000F&GATE&byte&Stores bit information of channels that are set for gate mode.\\
+0x000B&SAVE&bool&Used to set up reinit mode.\\
+0x000C&EXTCLK&bool&Controls clock source: 0:internal (10Mhz), 1:external.\\
+0x000D&INVERT&byte&Stores bit information of channels that are set up for inverted output.\\
+0x000E&GATE&byte&Stores bit information of channels that are set up for gate mode.\\
+0x000F&GATE2&byte&Stores bit information of channels that are set up for gate2 mode.\\
 0x0010&DELAY&long&Number of tick between the input trigger and the beginning of the first sequence.\\
 0x0018&WIDTH&int&Number of ticks the output remains high after raised.\\
 0x0020&PERIOD&int&Minimum number of ticks between two raising edges:\\
@@ -168,11 +168,13 @@ INIT is cleared. This will interrupt the program if running. The device is idlin
 \subsubsection*{trig (method = 'T')}
 TRIG is set and if armed the device will start the program, i.e. software trigger.
 \subsubsection*{reinit (method = 'R')}
-REINIT mode is set up (>=0) or deactivated (-1/None).
+REINIT mode is set up ($\rm{DELAY}\geq0$) or deactivated (-1/None).
 \subsubsection*{disarm (method = 'E')}
 EXT\_CLK is configured. This selects between internal 10MHz (0) and external (1) clock.
 \subsubsection*{gate (method = 'G')}
 GATE is configured as bit register controlling the output channels whether to be in signal (0) or gate (1) mode.
+\subsubsection*{gate2 (method = 'H')}
+GATE2 is configured as bit register controlling the output channels whether to be in signal (0) or gate2 (1) mode.
 \subsubsection*{invert (method = 'I')}
 INVERT is configured as bit register controlling the output channels whether to be in normal (0) or inverted (1) mode.
 \subsubsection*{state (method = 's')}
@@ -211,9 +213,10 @@ The digital signal is generated as a sequence of pulses of a given $\mathrm{WIDT
 The timing of the pulses is defined by $\mathrm{TIMES}$ that contains tick counts relative to the beginning of the cycle. The low-high transition of the gate is defined by the beginning of the cycle. The high-low transition is defined by the last element of $\mathrm{TIMES}$ plus $\mathrm{PERIOD}$.
 
 
-\begin{wave2}{3}
+\begin{wave2}{4}
  \nextwave{signal}\bit{0}{4} \bit{1}{2} \bit{0}{3} \bit{1}{2} \bit{0}{4}\bit{1}{2}\bit{0}{5}\bit{1}{2}\bit{0}{1}\unknownbit{1}\bit{0}{4}\bit{1}{2}\bit{0}{2}\bit{1}{2}\bit{0}{4}
- \nextwave{gate}\bit{0}{1} \bit{1}{38}\bit{0}{1}
+ \nextwave{gate} \bit{0}{1} \bit{1}{38}\bit{0}{1}
+ \nextwave{gate2}\bit{0}{4}\bit{1}{5}\bit{0}{6}\bit{1}{7}\bit{0}{8}\bit{1}{4}\bit{0}{6}
 \end{wave2}
 
 \subsection*{Pulse train ($\mathrm{WIDTH}=3,\mathrm{PERIOD}=10,\mathrm{BURST}=10$), makeClock}
@@ -221,9 +224,21 @@ In pulse train mode the parameter $\mathrm{PERIOD}$ and $\mathrm{BURST}$ are use
 $\mathrm{TIMES} = [0]$
 
 
-\begin{wave2}{3}
+\begin{wave2}{4}
  \nextwave{signal} \bit{0}{1}\bit{1}{3} \bit{0}{7} \bit{1}{3} \bit{0}{7}\bit{1}{3}\bit{0}{1}\unknownbit{1}\bit{0}{2}\bit{1}{3}\bit{0}{9}
  \nextwave{gate} \bit{0}{1}\bit{1}{37}\bit{0}{2}
+ \nextwave{gate2}\bit{0}{1}\bit{1}{10}\bit{0}{10}\bit{1}{4}\unknownbit{1}\bit{1}{2}\bit{0}{12}
 \end{wave2}
 \end{landscape}
+
+\section*{Samples}
+Simple sample to test-trigger a RedPitaya from within python
+\begin{lstlisting}
+from w7x_timing import remote
+rp = remote('10.44.2.122')
+# MAKE CLOCK: DELAY: 0, WIDTH: 100, PERIOD: 200, BURST: 1, CYCLE: 200, REPEAT: 1, COUNT: 1
+rp.makeClock(width=100)  # single 10us pulse
+rp.arm()                 # arms the device
+rp.trig()                # simulates a trigger input to the device
+\end{lstlisting}
 \end{document}
