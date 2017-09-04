@@ -298,6 +298,9 @@ class w7x_timing(object):
                             self.iface.gate2(_p.unpack('<b',param[0])[0])
                         elif cmd == 'I':
                             self.iface.invert(_p.unpack('<b',param[0])[0])
+                        elif cmd == 'c':
+                            self.conn.send(_p.pack('<BBBBBBBB',*self.iface.dev.control))
+                            continue
                         elif cmd == 's':
                             self.conn.send(_p.pack('<B',self.iface.state))
                             continue

@@ -1,4 +1,3 @@
-#!/usr/bin/python2
 import numpy as _n, socket as _s, struct as _p
 
 """ STATE CONSTANTS """
@@ -15,38 +14,42 @@ STATE_REPEAT = [ 50, 51]
 """ DEVICE """
 
 try:
-  from MDSplus import Device
+  from MDSplus import Device,version
+  tostr = version.tostr
   class W7X_TIMING(Device) :
+    """
+    MDSplus Device for the RedPitaya timing module at W7X
+    """
     parts=[
-           {'path': ':ACTIONSERVER',                'type': 'TEXT',    'options':('no_write_shot','write_once')},
-           {'path': ':ACTIONSERVER:INIT',           'type': 'ACTION',  'options':('no_write_shot','write_once'), 'valueExpr':'Action(node.DISPATCH,node.TASK)'},
-           {'path': ':ACTIONSERVER:INIT:DISPATCH',  'type': 'DISPATCH','options':('no_write_shot','write_once'), 'valueExpr':'Dispatch(head.actionserver,"INIT",21)'},
-           {'path': ':ACTIONSERVER:INIT:TASK',      'type': 'TASK',    'options':('no_write_shot','write_once'), 'valueExpr':'Method(None,"init",head)'},
-           {'path': ':ACTIONSERVER:ARM',            'type': 'ACTION',  'options':('no_write_shot','write_once'), 'valueExpr':'Action(node.DISPATCH,node.TASK)'},
-           {'path': ':ACTIONSERVER:ARM:DISPATCH',   'type': 'DISPATCH','options':('no_write_shot','write_once'), 'valueExpr':'Dispatch(head.actionserver,"INIT",51)'},
-           {'path': ':ACTIONSERVER:ARM:TASK',       'type': 'TASK',    'options':('no_write_shot','write_once'), 'valueExpr':'Method(None,"arm",head)'},
-           {'path': ':ACTIONSERVER:TRIG',           'type': 'ACTION',  'options':('no_write_shot','write_once'), 'valueExpr':'Action(node.DISPATCH,node.TASK)'},
-           {'path': ':ACTIONSERVER:TRIG:DISPATCH',  'type': 'DISPATCH','options':('no_write_shot','write_once'), 'valueExpr':'Dispatch(head.actionserver,"PULSE",1)'},
-           {'path': ':ACTIONSERVER:TRIG:TASK',      'type': 'TASK',    'options':('no_write_shot','write_once'), 'valueExpr':'Method(None,"trig",head)'},
-           {'path': ':ACTIONSERVER:DISARM',         'type': 'ACTION',  'options':('no_write_shot','write_once'), 'valueExpr':'Action(node.DISPATCH,node.TASK)'},
-           {'path': ':ACTIONSERVER:DISARM:DISPATCH','type': 'DISPATCH','options':('no_write_shot','write_once'), 'valueExpr':'Dispatch(head.actionserver,"DEINIT",21)'},
-           {'path': ':ACTIONSERVER:DISARM:TASK',    'type': 'TASK',    'options':('no_write_shot','write_once'), 'valueExpr':'Method(None,"disarm",head)'},
-           {'path': ':ACTIONSERVER:REINIT',         'type': 'TASK',    'options':('no_write_shot','write_once'), 'valueExpr':'Method(None,"reinit",head,(head.DELAY))'},
-           {'path': ':ACTIONSERVER:REINIT:DELAY',   'type': 'NUMERIC', 'options':('no_write_shot'),              'valueExpr':'Uint64(60).setUnits("s")', 'help':"time after trigger to wait for program upload"},
-           {'path': ':SERVER',                      'type': 'TEXT',    'options':('no_write_shot','write_once')},
-           {'path': ':COMMENT',                     'type': 'TEXT'},
-           {'path': ':CLOCK',                       'type': 'NUMERIC', 'options':('no_write_shot','write_once'), 'valueExpr':'Uint32(100 ).setUnits("ns")', 'help':"Internal clock runs at 10MHz."},
-           {'path': ':TRIGGER',                     'type': 'NUMERIC', 'options':('no_write_shot','write_once'), 'valueExpr': 'Int64(  0 ).setUnits("s")'},
-           {'path': ':INVERT'  ,                    'type': 'NUMERIC', 'options':('no_write_shot',), 'valueExpr':'Uint8Array([1,3,5])', 'help':"list of outputs [0..5] that should have an inverted signal"},
-           {'path': ':GATE',                        'type': 'NUMERIC', 'options':('no_write_shot',), 'valueExpr':'Uint8Array([2,3])', 'help':"list of outputs [0..5] that should have the gate instead of the trigger signal"},
-           {'path': ':GATE2',                       'type': 'NUMERIC', 'options':('no_write_shot',), 'valueExpr':'Uint8Array([4,5])', 'help':"list of outputs [0..5] that should be a gat that opens and closes every other trigger"},
-           {'path': ':DELAY',                       'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Int64(0).setUnits("s")'},
-           {'path': ':WIDTH',                       'type': 'NUMERIC', 'options':('no_write_shot',),             'value':None},
-           {'path': ':PERIOD',                      'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Uint64(  1 ).setUnits("us")'},
-           {'path': ':BURST',                       'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Uint64( 1e3)'},
-           {'path': ':CYCLE',                       'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Uint64(  1 ).setUnits("s")'},
-           {'path': ':REPEAT',                      'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Uint32(  1 )'},
-           {'path': ':TIMING',                      'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Uint64Array([0]).setUnits("us")', 'help':"Empty for clock\\nArray for sequence"},
+           {'path': ':ACTIONSERVER',                    'type': 'TEXT',    'options':('no_write_shot','write_once')},
+           {'path': ':ACTIONSERVER:INIT',               'type': 'ACTION',  'options':('no_write_shot','write_once'), 'valueExpr':'Action(node.DISPATCH,node.TASK)'},
+           {'path': ':ACTIONSERVER:INIT:DISPATCH',      'type': 'DISPATCH','options':('no_write_shot','write_once'), 'valueExpr':'Dispatch(head.actionserver,"INIT",21)'},
+           {'path': ':ACTIONSERVER:INIT:TASK',          'type': 'TASK',    'options':('no_write_shot','write_once'), 'valueExpr':'Method(None,"init",head)'},
+           {'path': ':ACTIONSERVER:ARM',                'type': 'ACTION',  'options':('no_write_shot','write_once'), 'valueExpr':'Action(node.DISPATCH,node.TASK)'},
+           {'path': ':ACTIONSERVER:ARM:DISPATCH',       'type': 'DISPATCH','options':('no_write_shot','write_once'), 'valueExpr':'Dispatch(head.actionserver,"INIT",51)'},
+           {'path': ':ACTIONSERVER:ARM:TASK',           'type': 'TASK',    'options':('no_write_shot','write_once'), 'valueExpr':'Method(None,"arm",head)'},
+           {'path': ':ACTIONSERVER:TEST_TRIG',          'type': 'ACTION',  'options':('no_write_shot','write_once'), 'valueExpr':'Action(node.DISPATCH,node.TASK)'},
+           {'path': ':ACTIONSERVER:TEST_TRIG:DISPATCH', 'type': 'DISPATCH','options':('no_write_shot','write_once'), 'valueExpr':'Dispatch(head.actionserver,"PULSE",1)'},
+           {'path': ':ACTIONSERVER:TEST_TRIG:TASK',     'type': 'TASK',    'options':('no_write_shot','write_once'), 'valueExpr':'Method(None,"trig",head)'},
+           {'path': ':ACTIONSERVER:DISARM',             'type': 'ACTION',  'options':('no_write_shot','write_once'), 'valueExpr':'Action(node.DISPATCH,node.TASK)'},
+           {'path': ':ACTIONSERVER:DISARM:DISPATCH',    'type': 'DISPATCH','options':('no_write_shot','write_once'), 'valueExpr':'Dispatch(head.actionserver,"DEINIT",21)'},
+           {'path': ':ACTIONSERVER:DISARM:TASK',        'type': 'TASK',    'options':('no_write_shot','write_once'), 'valueExpr':'Method(None,"disarm",head)'},
+           {'path': ':ACTIONSERVER:REINIT',             'type': 'TASK',    'options':('no_write_shot','write_once'), 'valueExpr':'Method(None,"reinit",head,(head.DELAY))'},
+           {'path': ':ACTIONSERVER:REINIT:DELAY',       'type': 'NUMERIC', 'options':('no_write_shot'),              'valueExpr':'Uint64(60).setUnits("s")', 'help':"time after trigger to wait for program upload"},
+           {'path': ':HOST',                            'type': 'TEXT',    'options':('no_write_shot','write_once')},
+           {'path': ':COMMENT',                         'type': 'TEXT'},
+           {'path': ':CLOCK',                           'type': 'NUMERIC', 'options':('no_write_shot','write_once'), 'valueExpr':'Uint32(100 ).setUnits("ns")', 'help':"Internal clock runs at 10MHz."},
+           {'path': ':TRIGGER',                         'type': 'NUMERIC', 'options':('no_write_shot','write_once'), 'valueExpr': 'Int64(  0 ).setUnits("s")'},
+           {'path': ':INVERT'  ,                        'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Uint8Array([])', 'help':"list of outputs [0..5] that should have an inverted signal"},
+           {'path': ':GATE',                            'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Uint8Array([])', 'help':"list of outputs [0..5] that should have the gate instead of the trigger signal"},
+           {'path': ':GATE2',                           'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Uint8Array([])', 'help':"list of outputs [0..5] that should be a gat that opens and closes every other trigger"},
+           {'path': ':DELAY',                           'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Uint64(0).setUnits("s")'},
+           {'path': ':WIDTH',                           'type': 'NUMERIC', 'options':('no_write_shot',),},
+           {'path': ':PERIOD',                          'type': 'NUMERIC', 'options':('no_write_shot',),},
+           {'path': ':BURST',                           'type': 'NUMERIC', 'options':('no_write_shot',),},
+           {'path': ':CYCLE',                           'type': 'NUMERIC', 'options':('no_write_shot',),},
+           {'path': ':REPEAT',                          'type': 'NUMERIC', 'options':('no_write_shot',),},
+           {'path': ':TIMING',                          'type': 'NUMERIC', 'options':('no_write_shot',),             'valueExpr':'Uint64Array([0]).setUnits("us")', 'help':"Empty for clock\\nArray for sequence"},
           ]
 
     units_ns = {'ns':1, 'us':1000, 'ms':1000000, 's':1000000000}
@@ -54,22 +57,22 @@ try:
     @property
     def com(self):
         if self._com is None:
-            self._com = remote(self._server)
+            self._com = remote(self._host)
         return self._com
     @property
     def _clock(self):
         rec = self.clock.getRecord(None)
         if rec is None: return 100
         value = rec.data()
-        units = str(rec.getUnits()).strip().lower()
+        units = str(rec.units).strip().lower()
         return value * self.units_ns.get(units,1)
     def _toticks(self,node):
         try:
             rec = node.getRecord(None)
             if rec is None: return None
-            units = str(rec.getUnits()).strip().lower()
+            units = str(rec.units).strip().lower()
             value = rec.data()
-            if self.units_ns.has_key(units):
+            if units in self.units_ns:
                 value = value * self.units_ns[units] / self._clock
             return value.tolist()
         except:
@@ -77,7 +80,7 @@ try:
             traceback.print_exc()
             return None
     @property
-    def _server(self): return str(self.server.data())
+    def _host(self): return str(self.host.data())
     @property
     def _gate(self):   return self.gate.data().tolist()
     @property
@@ -91,13 +94,27 @@ try:
     @property
     def _width(self):  return self._toticks(self.width)
     @property
-    def _burst(self):  return int(self.burst.data())
+    def _burst(self):  return int(self.burst.deref.getRecord(1))
     @property
     def _cycle(self):  return self._toticks(self.cycle)
     @property
-    def _repeat(self): return int(self.repeat.data())
+    def _repeat(self): return int(self.repeat.deref.getRecord(1))
     @property
     def _timing(self): return self._toticks(self.timing)
+
+    def setup(self,delay=0,width=None,period=None,burst=1,cycle=None,repeat=0,timing=[0],gate=[],gate2=[],invert=[]):
+        from MDSplus import Uint8Array,Uint64Array
+        self.delay  = delay
+        self.width  = width
+        self.period = period
+        self.burst  = burst
+        self.cycle  = cycle
+        self.repeat = repeat
+        self.timing = Uint64Array(timing)
+        self.gate   = Uint8Array(gate)
+        self.gate2  = Uint8Array(gate2)
+        self.invert = Uint8Array(invert)
+
     def arm(self):
         self.com.arm()
     def trig(self):
@@ -108,11 +125,13 @@ try:
         self.com.gate(self._gate)
         self.com.gate2(self._gate2)
         self.com.invert(self._invert)
-        print(self.com.makeSequence(self._delay,self._width,self._period,self._burst,self._cycle,self._repeat,self._timing))
-    def reinit(self,delay):
-        self.com.reinit(self.toticks(delay))
-        self.com.arm()
-except: pass
+        report = self.com.makeSequence(self._delay,self._width,self._period,self._burst,self._cycle,self._repeat,self._timing)
+        if 'ERROR' in report: raise Exception(report)
+    def reinit(self):
+        self.com.reinit(self._delay)
+except:
+    tostr = str
+
 
 """ REMOTE CONNECTION """
 
@@ -126,7 +145,7 @@ class remote(object):
         return val
     @staticmethod
     def _makeMsg(prog,form,length,*args):
-        return 'W7X'+_p.pack('<L',length)+prog[0]+_p.pack(form,*args)
+        return b'W7X'+_p.pack('<L',length)+prog[0:1]+_p.pack(form,*args)
     def __init__(self,address):
         host = address.split(':',2)+[5000]
         port = int(host[1])
@@ -136,14 +155,14 @@ class remote(object):
         self.sock = _s.socket(_s.AF_INET, _s.SOCK_STREAM)
         self.sock.connect(self._address)
         self.sock.settimeout(3)
-    def _exchange(self,msg,force_str=False):
+    def _exchange_str(self,msg,force_str=False):
         def _tryexchange(msg):
             self.sock.send(msg)
             ret = self.sock.recv(4)
             if len(ret)<4: raise _s.error
             length = _p.unpack('<L',ret)[0]
             if length>0:
-                return self.sock.recv(length+255)
+                return tostr(self.sock.recv(length+255))
         try:
             ans = _tryexchange(msg)
         except _s.error:
@@ -152,62 +171,60 @@ class remote(object):
         if force_str:
             return '' if ans is None else ans
         return self if ans is None else ans
+    def _exchange(self,msg,format,length):
+        def _tryexchange(msg,format,length):
+            self.sock.send(msg)
+            ret = self.sock.recv(length+255)
+            if len(ret)<length: raise _s.error
+            return _p.unpack(format,ret)
+        try:
+            return _tryexchange(msg,format,length)
+        except _s.error:
+            self.connect()
+            return _tryexchange(msg,format,length)
     @staticmethod
     def _tointargs(*args):
         return tuple((int(arg) if arg is not None else -1) for arg in args)
-    def makeClock(self,delay=-1,width=-1,period=-1,burst=-1,cycle=-1,repeat=-1):
+    def makeClock(self,delay=0,width=-1,period=-1,burst=-1,cycle=-1,repeat=-1):
         args= remote._tointargs(delay,width,period,burst,cycle,repeat)
-        msg = remote._makeMsg('C','<qqqqql',44,*args)
-        return self._exchange(msg)
-    def makeSequence(self,delay=-1,width=-1,period=-1,burst=-1,cycle=-1,repeat=-1,timing=-1):
+        msg = remote._makeMsg(b'C','<qqqqql',44,*args)
+        return self._exchange_str(msg)
+    def makeSequence(self,delay=0,width=-1,period=-1,burst=-1,cycle=-1,repeat=-1,timing=[0]):
         timing = _n.array(timing,_n.int64).tostring()
         length = len(timing)+44
         args= remote._tointargs(delay,width,period,burst,cycle,repeat)
-        msg = remote._makeMsg('S','<qqqqql',length,*args)+timing
-        return self._exchange(msg)
+        msg = remote._makeMsg(b'S','<qqqqql',length,*args)+timing
+        return self._exchange_str(msg)
     def arm(self):
-        msg = remote._makeMsg('A','',0)
-        return self._exchange(msg)
+        return self._exchange_str(remote._makeMsg(b'A','',0))
     def rearm(self):
-        msg = remote._makeMsg('R','',0)
-        return self._exchange(msg)
+        return self._exchange_str(remote._makeMsg(b'R','',0))
     def reinit(self,default_delay=-1):
-        msg = remote._makeMsg('X','<q',8,default_delay)
-        return self._exchange(msg)
+        return self._exchange_str(remote._makeMsg(b'X','<q',8,default_delay))
     def disarm(self):
-        msg = remote._makeMsg('D','',0)
-        return self._exchange(msg)
+        return self._exchange_str(remote._makeMsg(b'D','',0))
     def trig(self):
-        msg = remote._makeMsg('T','',0)
-        return self._exchange(msg)
+        return self._exchange_str(remote._makeMsg(b'T','',0))
     def extclk(self,value=True):
-        msg = remote._makeMsg('E','<b',1,1 if value else 0)
-        return self._exchange(msg)
+        return self._exchange_str(remote._makeMsg(b'E','<b',1,1 if value else 0))
     def gate(self,val=0):
-        msg = remote._makeMsg('G','<B',1,self._tobyte(val))
-        return self._exchange(msg)
+        return self._exchange_str(remote._makeMsg(b'G','<B',1,self._tobyte(val)))
     def gate2(self,val=0):
-        msg = remote._makeMsg('H','<B',1,self._tobyte(val))
-        return self._exchange(msg)
+        return self._exchange_str(remote._makeMsg(b'H','<B',1,self._tobyte(val)))
     def invert(self,val=0):
-        msg = remote._makeMsg('I','<B',1,self._tobyte(val))
-        return self._exchange(msg)
+        return self._exchange_str(remote._makeMsg(b'I','<B',1,self._tobyte(val)))
     @property
     def state(self):
-        self.sock.send(remote._makeMsg('s','',0))
-        return _p.unpack('<B',self.sock.recv(1))[0]
+        return self._exchange(remote._makeMsg(b's','',0),'<B',1)[0]
     @property
     def control(self):
-        self.sock.send(remote._makeMsg('c','',0))
-        return _p.unpack('<BBBBBBBB',self.sock.recv(8))
+        return self._exchange(remote._makeMsg(b'c','',0),'<BBBBBBBB',8)
     @property
     def params(self):
-        self.sock.send(remote._makeMsg('p','',0))
-        return _p.unpack('<qqqqqll',self.sock.recv(48))
+        return self._exchange(remote._makeMsg(b'p','',0),'<qqqqqll',48)
     @property
     def error(self):
-        msg = remote._makeMsg('e','',0)
-        return self._exchange(msg,True)
+        return self._exchange_str(remote._makeMsg(b'e','',0),True)
     @property
     def has_ext_clk(self):
         if self.state != STATE_IDLE[1]:
@@ -262,12 +279,12 @@ class Test(_u.TestCase):
     def runTest(self):
         self.connect()
 
-def test(hostname=None):
+def test(host=None):
     import os
-    if hostname is None:
-        Test._host = os.getenv('RedPitaya','localhost')
+    if host is None:
+        Test._host = os.getenv('RedPitaya','RP-F0432C')
     else:
-        Test._host = hostname
+        Test._host = host
     suite=_u.TestSuite((Test('connect'),))
     tr=_u.TextTestRunner(stream=os.sys.stderr)
     tr.run(suite)
