@@ -38,8 +38,6 @@ static char error[1024];
     return C_DEV_ERROR; \
   }
 
-
-
 static pthread_mutex_t dev_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct w7x_timing *dev = NULL;
 
@@ -153,6 +151,12 @@ int getParams(uint64_t *delay_p, uint64_t *width_p, uint64_t *period_p, uint64_t
   if (count_p) *count_p  = dev->w_count;
   return C_OK;
 }
+
+uint64_t getRegister() {
+  INIT_DEVICE
+  return *(uint64_t*)&dev->w_init;
+}
+
 
 int getTimes(uint32_t offset, uint32_t count, uint64_t *times_p) {
   int i;

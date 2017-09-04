@@ -42,7 +42,7 @@ typedef unsigned long long   uint64_t;
 # pragma pack(1)
 struct w7x_timing {//manual packing 64 bit
   uint8_t  r_status[MAX_STATUS];//0x00 ++0x01
-  uint8_t  w_init;              //0x08 1:arm,2:rearm,4:reinit
+  uint8_t  w_init;              //0x08 &1:on,&2:arm,&4:rearm,&8:reinit
   uint8_t  w_trig;              //0x09
   uint8_t  w_clear;             //0x0A
   uint8_t  w_save;              //0x0B
