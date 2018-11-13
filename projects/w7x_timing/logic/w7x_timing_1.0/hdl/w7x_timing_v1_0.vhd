@@ -250,7 +250,7 @@ begin
     -- handle fpga write operations
     state_buf <= state;
     if armed = '0' then
-      if (c_trig = '1' and c_rearm ='0') then
+      if (trigger = '1' and c_rearm ='0') then
         c_arm <= '0';
       end if;
       cc_trig <= (others => '0');

@@ -9,26 +9,17 @@ static char error[1024];
 #define CHECK_INPUTS \
   uint64_t delay, cycle, burst, width, period; \
   uint32_t repeat; \
-  if (!width_p && !period_p && !cycle_p && !repeat_p && !burst_p) { \
-    delay  = delay_p ? *delay_p : DEFAULT_DELAY; \
-    width  = 5; \
-    period = 10; \
-    burst  = 0; \
-    cycle  = 0; \
-    repeat = 0; \
+  delay  = delay_p  ? *delay_p  : 0; \
+  repeat = repeat_p ? *repeat_p : 1; \
+  if (period_p) { \
+    period = *period_p; \
+    width = width_p ? *width_p : period/2; \
   } else { \
-    delay  = delay_p  ? *delay_p  : 0; \
-    repeat = repeat_p ? *repeat_p : 1; \
-    if (period_p) { \
-      period = *period_p; \
-      width = width_p ? *width_p : period/2; \
-    } else { \
-      width = width_p ? *width_p : 5; \
-      period = width*2; \
-    } \
-    burst  = burst_p  ? *burst_p  : 1; \
-    repeat = repeat_p ? *repeat_p : 1; \
-  }
+    width = width_p ? *width_p : 5; \
+    period = width*2; \
+  } \
+  burst  = burst_p  && *burst_p>0  ? *burst_p  : 1; \
+  repeat = repeat_p && *repeat_p>0 ? *repeat_p : 1;
 
 #define INIT_DEVICE \
   *error = 0; \
@@ -281,13 +272,18 @@ int trig() {
 
 int reinit(uint64_t *delay_p) {
     INIT_DEVICE
-    dev->w_init   =  0;
-    int status = makeClock(delay_p,NULL,NULL,NULL,NULL,NULL);
-    if (status != C_OK) return status;
+    dev->w_init   = 0;
+    dev->w_count  = 0;
+    dev->w_delay  = delay_p ? *delay_p : DEFAULT_DELAY;
+    dev->w_width  = 0;
+    dev->w_period = 0;
+    dev->w_burst  = 0;
+    dev->w_cycle  = 0;
+    dev->w_repeat = 0;
     nanosleep(&t,0);
-    dev->w_save   = -1;
+    dev->w_save   =-1;
     nanosleep(&t,0);
-    dev->w_clear  = -1;
+    dev->w_clear  =-1;
     dev->w_init   = INIT_REINIT;
     return C_OK;
 }
