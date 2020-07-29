@@ -23,5 +23,5 @@ automake --add-missing --copy -W none
 autoconf
 
 echo "#"
-echo "# All done... now try to configure using \"./configure --enable-kconfig\""
+echo "# All done... now try to configure using \"./configure --with-vivado-version=2017.2\""
 echo "#"

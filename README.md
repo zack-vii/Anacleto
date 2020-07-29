@@ -9,7 +9,7 @@ build:
 >
 > cd anacleto <br>
 > ./bootstrap  <br>
-> ./configure --enable-kconfig  <br>
+> ./configure --enable-custom-toolchain --enable-fpga --enable-board-red-pitaya --with-vivado-version=2017.2 <br>
 > make all  <br>
 >
 
