@@ -14,7 +14,7 @@
 (
 sleep 1
 cat /root/red_pitaya.bit > /dev/xdevcfg
-insmod /root/rp_timing.ko
+insmod /root/w7x_timing.ko
 (
 while :
 do

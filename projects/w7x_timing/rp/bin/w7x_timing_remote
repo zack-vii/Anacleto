@@ -1,0 +1,218 @@
+import numpy as _n, socket as _s, struct as _p
+
+""" STATE CONSTANTS """
+# state[0]:error, state[1]:ok
+STATE_IDLE   = [  6,  7]
+STATE_ARMED  = [ 14, 15]
+STATE_DELAY  = [ 22, 23]
+STATE_SAMPLE = [114,115]
+STATE_LOW    = [ 82, 83]
+STATE_HIGH   = [210,211]
+STATE_REPEAT = [ 50, 51]
+
+""" REMOTE CONNECTION """
+
+class remote(object):
+    @staticmethod
+    def _tobyte(val):
+        if not isinstance(val,int):
+            value = 0;
+            for ch in val: value |= 4<<ch
+            return value
+        return val
+    @staticmethod
+    def _makeMsg(prog,form,length,*args):
+        return b'W7X'+_p.pack('<L',length)+prog[0:1]+_p.pack(form,*args)
+    def __init__(self,address):
+        host = address.split(':',2)+[5000]
+        port = int(host[1])
+        self._address = (host[0],port)
+        self.connect()
+    def connect(self):
+        self.sock = _s.socket(_s.AF_INET, _s.SOCK_STREAM)
+        self.sock.connect(self._address)
+        self.sock.settimeout(3)
+    def _exchange_str(self,msg,force_str=False):
+        def _tryexchange(msg):
+            self.sock.send(msg)
+            ret = self.sock.recv(4)
+            if len(ret)<4: raise _s.error
+            length = _p.unpack('<L',ret)[0]
+            if length>0:
+                return str(self.sock.recv(length+255)[:length])
+        try:
+            ans = _tryexchange(msg)
+        except _s.error:
+            self.connect()
+            ans = _tryexchange(msg)
+        if force_str:
+            return '' if ans is None else ans
+        return self if ans is None else ans
+    def _exchange(self,msg,format,length):
+        def _tryexchange(msg,format,length):
+            self.sock.send(msg)
+            ret = self.sock.recv(length+255)
+            if len(ret)<length: raise _s.error
+            return _p.unpack(format,ret)
+        try:
+            return _tryexchange(msg,format,length)[:length]
+        except _s.error:
+            self.connect()
+            return _tryexchange(msg,format,length)[:length]
+    @staticmethod
+    def _tointargs(*args):
+        return tuple((int(arg) if arg is not None else -1) for arg in args)
+    def makeClock(self,delay=0,width=-1,period=-1,burst=-1,cycle=-1,repeat=-1):
+        args= remote._tointargs(delay,width,period,burst,cycle,repeat)
+        msg = remote._makeMsg(b'C','<qqqqql',44,*args)
+        return self._exchange_str(msg)
+    def makeSequence(self,delay=0,width=-1,period=-1,burst=-1,cycle=-1,repeat=-1,timing=[0]):
+        timing = _n.array(timing,_n.int64).tostring()
+        length = len(timing)+44
+        args= remote._tointargs(delay,width,period,burst,cycle,repeat)
+        msg = remote._makeMsg(b'S','<qqqqql',length,*args)+timing
+        return self._exchange_str(msg)
+    def arm(self):
+        return self._exchange_str(remote._makeMsg(b'A','',0))
+    def rearm(self):
+        return self._exchange_str(remote._makeMsg(b'R','',0))
+    def reinit(self,default_delay=-1):
+        return self._exchange_str(remote._makeMsg(b'X','<q',8,default_delay))
+    def disarm(self):
+        return self._exchange_str(remote._makeMsg(b'D','',0))
+    def trig(self):
+        return self._exchange_str(remote._makeMsg(b'T','',0))
+    def extclk(self,value=True):
+        return self._exchange_str(remote._makeMsg(b'E','<b',1,1 if value else 0))
+    def gate(self,val=0):
+        return self._exchange_str(remote._makeMsg(b'G','<B',1,self._tobyte(val)))
+    def gate2(self,val=0):
+        return self._exchange_str(remote._makeMsg(b'H','<B',1,self._tobyte(val)))
+    def invert(self,val=0):
+        return self._exchange_str(remote._makeMsg(b'I','<B',1,self._tobyte(val)))
+    @property
+    def state(self):
+        return self._exchange(remote._makeMsg(b's','',0),'<B',1)[0]
+    @property
+    def control(self):
+        return self._exchange(remote._makeMsg(b'c','',0),'<BBBBBBBB',8)
+    @property
+    def params(self):
+        return self._exchange(remote._makeMsg(b'p','',0),'<qqqqqll',48)
+    @property
+    def error(self):
+        return self._exchange_str(remote._makeMsg(b'e','',0),True)
+    @property
+    def has_ext_clk(self):
+        if self.state != STATE_IDLE[1]:
+            raise Exception("You should disarm the device first.\nCurrent state: %d",self.state)
+        from time import sleep
+        self.disarm()
+        self.extclk(0)
+        idle = self.state
+        self.makeClock(1e7)
+        self.extclk(1)
+        self.arm()
+        sleep(0.01)
+        hasext = self.state != idle
+        self.extclk(0)
+        self.disarm()
+        return hasext
+
+""" UNIT TEST """
+
+import time,unittest as _u
+class Test(_u.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.dev = remote(cls._host)
+        cls.dev.arm()
+        cls.dev.disarm();
+        time.sleep(.001)
+        if cls.dev.has_ext_clk:
+            print("test using external clock.")
+            cls.dev.extclk(1)
+
+    def arm(self):
+        self.dev.disarm();
+        self.assertEqual(self.dev.state,STATE_IDLE[1])
+        self.dev.gate([2,4])
+        self.dev.gate2([5])
+        self.dev.invert([3,4])
+        self.dev.makeClock(cycle=1000000,burst=1000,repeat=5)
+        self.assertEqual(self.dev.error.strip(),"MAKE CLOCK: DELAY: 0, WIDTH: 5, PERIOD: 10, BURST: 1000, CYCLE: 1000000, REPEAT: 5, COUNT: 1")
+        self.assertEqual(self.dev.params,(0,5,10,1000,1000000,5,1))
+        self.dev.makeSequence(1e6,1e3,2e3,10,3e6,3,[0,1e5,2e5,3e5,4e5])
+        self.assertEqual(self.dev.error.strip(),"""MAKE SEQUENCE: TIMES: [0, 100000, 200000, 300000, 400000],
+DELAY: 1000000, WIDTH: 1000, PERIOD: 2000, BURST: 10, CYCLE: 3000000, REPEAT: 3, COUNT: 5""")
+        self.dev.arm()
+        self.assertEqual(self.dev.state,STATE_ARMED[1])
+        self.dev.trig()
+        time.sleep(.05)
+        self.assertEqual(self.dev.state,STATE_DELAY[1])
+        time.sleep(1.1)
+        self.assertEqual(self.dev.state,STATE_IDLE[1])
+
+    def rearm(self):
+        self.dev.disarm();
+        self.assertEqual(self.dev.state,STATE_IDLE[1])
+        self.dev.rearm()
+        self.dev.makeClock(delay=1500000,width=1000000)
+        self.assertEqual(self.dev.params,(1500000,1000000,2000000,1,2000000,1,1))
+        self.assertEqual(self.dev.state,STATE_ARMED[1])
+        self.dev.trig()
+        time.sleep(.1)
+        self.assertEqual(self.dev.state,STATE_DELAY[1])
+        time.sleep(.1)
+        self.assertEqual(self.dev.state,STATE_HIGH[1])
+        time.sleep(.1)
+        self.assertEqual(self.dev.state,STATE_LOW[1])
+        time.sleep(.1)
+        self.assertEqual(self.dev.state,STATE_ARMED[1])
+        self.assertEqual(self.dev.params,(1500000,1000000,2000000,1,2000000,1,1))
+
+    def reinit(self):
+        self.dev.disarm();
+        self.assertEqual(self.dev.state,STATE_IDLE[1])
+        self.dev.reinit()
+        self.assertEqual(self.dev.state,STATE_ARMED[1])
+        self.dev.trig()
+        p=self.dev.params;self.assertEqual((p[0],p[3:6]),(600000000,(0,0,0)))
+        time.sleep(.1)
+        self.assertEqual(self.dev.state,STATE_DELAY[1])
+        self.dev.makeClock(delay=1500000,width=1000000)
+        self.assertEqual(self.dev.params,(1500000,1000000,2000000,1,2000000,1,1))
+        time.sleep(.1)
+        self.assertEqual(self.dev.state,STATE_HIGH[1])
+        time.sleep(.1)
+        self.assertEqual(self.dev.state,STATE_LOW[1])
+        time.sleep(.1)
+        self.assertEqual(self.dev.state,STATE_ARMED[1])
+        p=self.dev.params;self.assertEqual((p[0],p[3:6]),(600000000,(0,0,0)))
+
+    def runTest(self):
+        for test in self.tests:
+            self.__getattr__(test)()
+
+    tests = ('arm','rearm','reinit')
+    @classmethod
+    def getTests(cls): return tuple(map(cls,Test.tests))
+
+def test(host=None):
+    import os
+    if host is None:
+        Test._host = os.getenv('RedPitaya','RP-F0432C')
+    else:
+        Test._host = host
+    suite=_u.TestSuite(Test.getTests())
+    tr=_u.TextTestRunner(stream=os.sys.stderr,verbosity=2)
+    tr.run(suite)
+
+""" EXECUTION """
+
+if __name__=="__main__":
+    import sys
+    if len(sys.argv)==1:
+        test()
+    elif len(sys.argv)==2:
+        test(sys.argv[1])

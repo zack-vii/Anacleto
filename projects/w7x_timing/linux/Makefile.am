@@ -6,16 +6,15 @@ AM_CPPFLAGS  = -lpthread
 
 
 MODULES = \
-	  w7x_timing
+	  rptiming
 
 TEST_EXAMPLES = \
-	  w7x_timing_test 
+	  rptiming
 
 RUN_LIBRARY = \
-	  w7x_timing_lib
-          
-MOSTLYCLEANFILES = $(TEST_EXAMPLES)
+	  rptiming
 
+MOSTLYCLEANFILES = $(TEST_EXAMPLES) $(RUN_LIBRARY_SO)
 
 .PHONY: modules
 modules: $(MODULES:=.c) Kbuild
@@ -34,17 +33,18 @@ clean-local:
 
 .PHONY: test_examples
 test_examples: $(TEST_EXAMPLES)
-
 $(TEST_EXAMPLES):
 	echo " --- building $@ ---"; \
 	$(_set_export); \
-	${CROSS_COMPILE}${CC} $(LINUX_CFLAGS) $(srcdir)/$@.c -o $@ -lpthread -O2
+	${CROSS_COMPILE}${CC} $(LINUX_CFLAGS) $(srcdir)/$@_test.c -o $@ -lpthread -O2
 
-$(RUN_LIBRARY):
+.PHONY: run_library
+run_library: $(RUN_LIBRARY_SO)
+RUN_LIBRARY_SO = $(addprefix lib,$(RUN_LIBRARY:=.so))
+$(RUN_LIBRARY_SO): lib%.so: %_lib.c
 	echo " --- building $@ ---"; \
 	$(_set_export); \
-	${CROSS_COMPILE}${CC} $(LINUX_CFLAGS) $(srcdir)/$@.c -fPIC -o lib$@.so -O2 -shared 
-
+	${CROSS_COMPILE}${CC} $(LINUX_CFLAGS) $(srcdir)/$< -fPIC -o $@ -O2 -shared
 
 .PHONY: deploy
 deploy: $(MODULES:=.ko) $(TEST_EXAMPLES)
@@ -60,5 +60,4 @@ if WITH_DEVICE_SSHPASSWD
 endif
 endif
 
-
-all: modules test_examples $(RUN_LIBRARY)
+all: modules test_examples run_library

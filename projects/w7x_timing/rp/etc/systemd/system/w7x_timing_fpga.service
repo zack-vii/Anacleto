@@ -1,0 +1,11 @@
+[Unit]
+Description=w7x timing module
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "/bin/cat /root/red_pitaya.bit>/dev/xdevcfg;/sbin/insmod /root/w7x_timing.ko"
+ExecStop=/sbin/rmmod w7x_timing.ko
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

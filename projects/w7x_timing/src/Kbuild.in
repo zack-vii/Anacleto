@@ -2,4 +2,4 @@
 obj = $(builddir)
 src = $(srcdir)
 
-obj-m += rptiming.o
+obj-m += w7x_timing.o
