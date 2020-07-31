@@ -272,40 +272,40 @@ proc make_package_ip { } {
 proc make_repackage_ip {} {
   set_compatible_with Vivado
   set ipdir $v::ce(ipdir)
-  
-  proc create_core {} {    
+
+  proc create_core {} {
     upvar 1 ipdir ipdir
     file mkdir $ipdir
     puts " --- CREATING NEW CORE --- "
-    ipx::create_core $v::ce(VENDOR) $v::ce(VENDOR) $v::ce(core_name) $v::ce(VERSION)
+    ipx::create_core $v::ce(VENDOR) $v::ce(LIBRARY) $v::ce(core_name) $v::ce(VERSION)
     set core [ipx::current_core]
     set_property ROOT_DIRECTORY $ipdir $core
     ipx::save_core $core
     return $core
   }
-  
+
   ## REPACKAGE CURRENT PROJECT WITH FILES
-  set files_no [llength [get_files -quiet]]  
-  if { $files_no > 0 } {     
-    puts "REPACKAGE IP: $files_no FILES"  
+  set files_no [llength [get_files -quiet]]
+  if { $files_no > 0 } {
+    puts "REPACKAGE IP: $files_no FILES"
     ipx::package_project -root_dir $ipdir -vendor $v::ce(VENDOR) -import_files -set_current 1
     set core [ipx::current_core]
     #note: use -module to add a bd_design
   } else {
-    if {[catch {set core [ipx::current_core]}]} {set core [create_core]}    
+    if {[catch {set core [ipx::current_core]}]} {set core [create_core]}
   }
-  
+
   ## SET VARIABLES
-  set_property ROOT_DIRECTORY $ipdir $core   
+  set_property ROOT_DIRECTORY $ipdir $core
   set_property VERSION        $v::ce(VERSION) $core
   set_property NAME           $v::ce(core_name) $core
   set_property DISPLAY_NAME   $v::ce(core_fullname) $core
-  set_property LIBRARY        $v::ce(VENDOR) $core
+  set_property LIBRARY        $v::ce(LIBRARY) $core
   set_property VENDOR         $v::ce(VENDOR) $core
   # set_property supported_families {zynq Beta} $core
-  
+
   catch {set_property file_type IP-XACT [get_files $ipdir/component.xml]}
-  
+
   ipx::add_file_group -type software_driver {} $core
   foreach file [split $v::ce(DRV_LINUX) " "] {
     # add_files -force -norecurse -copy_to ${ipdir}/bsp/[file dirname $file] $v::me(srcdir)/$file

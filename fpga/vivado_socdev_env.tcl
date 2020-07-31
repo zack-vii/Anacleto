@@ -93,8 +93,9 @@ proc reset_core_env {} {
   set    core_env(core_fullname)    [compute_core_fullname]
   set    core_env(core_name)        [getenv NAME]
   set    core_env(ipdir)            [getenv VIVADO_IPDIR]/[compute_core_fullname]
-  set    core_env(VENDOR)           [getenv VENDOR]
-  set    core_env(VERSION)          [getenv VERSION]
+  set    core_env(VENDOR)           [getenv VENDOR none]
+  set    core_env(LIBRARY)          [getenv LIBRARY ip]
+  set    core_env(VERSION)          [getenv VERSION 1.0]
   set    core_env(DRV_LINUX)        [getenv DRV_LINUX]
   set    core_env(BSPDIR)           [getenv BSPDIR]
 }
