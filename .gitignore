@@ -1,7 +1,15 @@
+Makefile
+KConfig
+Kbuild
 Makefile.in
 /aclocal.m4
 /autom4te.cache
 /conf/depcomp
+/.config
+/.config.old
+/config.h
+/config.log
+/config.status
 /config.h.in
 /config.h.in~
 /configure
@@ -18,11 +26,11 @@ Makefile.in
 
 /build*
 
-vivado_project/
-.cache/
-.hw/
-.xpr
+/fpga/xlnx-devicetree
+/lib/
+/uImage
 
-/home/andrea/devel/rfx/anacleto/build/download
-/home/andrea/devel/rfx/anacleto/build/toolchain
+/downloads
+/toolchain
+/.
 /linux
