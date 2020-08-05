@@ -6,8 +6,8 @@
 
 #### DIO
 #DIO0-7_P
-set_property PACKAGE_PIN G17 [get_ports trig_in]
-set_property PACKAGE_PIN H16 [get_ports  clk_in]
+set_property PACKAGE_PIN G17 [get_ports trg_in]
+set_property PACKAGE_PIN H16 [get_ports clk_in]
 set_property PACKAGE_PIN J18 [get_ports {state1[2]}]
 set_property PACKAGE_PIN K17 [get_ports {state1[3]}]
 set_property PACKAGE_PIN L14 [get_ports {state1[4]}]
@@ -24,8 +24,8 @@ set_property PACKAGE_PIN L17 [get_ports {state0[5]}]
 set_property PACKAGE_PIN J16 [get_ports {state0[6]}]
 set_property PACKAGE_PIN M15 [get_ports {state0[7]}]
 
-set_property IOSTANDARD LVCMOS33 [get_ports {state0[*] state1[*] trig_in clk_in}]
-set_property PULLDOWN true       [get_ports {trig_in clk_in}]
+set_property IOSTANDARD LVCMOS33 [get_ports {state0[*] state1[*] trg_in clk_in}]
+set_property PULLDOWN true       [get_ports {trg_in clk_in}]
 set_property SLEW FAST [get_ports {state0[*] state1[*]}]
 set_property DRIVE 8   [get_ports {state0[*] state1[*]}]
 
@@ -47,5 +47,5 @@ set_clock_groups -name async -asynchronous -group clk_in -group clk_fpga_0
 #
 set_output_delay -clock [get_clocks clk_in] -min  0 [get_ports {state0[*] state1[*] state_leds[*]}]
 set_output_delay -clock [get_clocks clk_in] -max 10 [get_ports {state0[*] state1[*] state_leds[*]}]
-set_input_delay  -clock [get_clocks clk_in] -min  0 [get_ports {trig_in}]
-set_input_delay  -clock [get_clocks clk_in] -max 10 [get_ports {trig_in}]
+set_input_delay  -clock [get_clocks clk_in] -min  0 [get_ports {trg_in}]
+set_input_delay  -clock [get_clocks clk_in] -max 10 [get_ports {trg_in}]

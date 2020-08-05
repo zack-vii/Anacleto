@@ -1,8 +1,8 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Fri Jul 31 02:07:52 2020
-//Host        : fc-ubu1-009 running 64-bit Ubuntu 18.04.4 LTS
+//Date        : Wed Aug  5 15:42:36 2020
+//Host        : mds-data-1 running 64-bit unknown
 //Command     : generate_target system_wrapper.bd
 //Design      : system_wrapper
 //Purpose     : IP block netlist
@@ -35,7 +35,7 @@ module system_wrapper
     state0,
     state1,
     state_leds,
-    trig_in);
+    trg_in);
   inout [14:0]DDR_addr;
   inout [2:0]DDR_ba;
   inout DDR_cas_n;
@@ -61,7 +61,7 @@ module system_wrapper
   output [7:0]state0;
   output [7:2]state1;
   output [7:0]state_leds;
-  input trig_in;
+  input trg_in;
 
   wire [14:0]DDR_addr;
   wire [2:0]DDR_ba;
@@ -88,7 +88,7 @@ module system_wrapper
   wire [7:0]state0;
   wire [7:2]state1;
   wire [7:0]state_leds;
-  wire trig_in;
+  wire trg_in;
 
   system system_i
        (.DDR_addr(DDR_addr),
@@ -116,5 +116,5 @@ module system_wrapper
         .state0(state0),
         .state1(state1),
         .state_leds(state_leds),
-        .trig_in(trig_in));
+        .trg_in(trg_in));
 endmodule
