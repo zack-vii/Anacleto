@@ -10,10 +10,10 @@ entity w7x_timing_v1_0 is
         ADDR_WIDTH : integer := 16
     );
     port (
-        clk_axi_in : in  std_logic;
-        clk_in     : in  STD_LOGIC;
-        clk20_in   : in  STD_LOGIC;
-        trig_in    : in  STD_LOGIC;
+        clk_axi_in : in  STD_LOGIC;
+        clk_ext_in : in  STD_LOGIC;
+        clk_int_in : in  STD_LOGIC;
+        trg_in     : in  STD_LOGIC;
         state_do   : out STD_LOGIC_VECTOR (7 downto 2);
         state_led  : out STD_LOGIC_VECTOR (7 downto 0);
         power_down : out STD_LOGIC;
@@ -181,15 +181,9 @@ architecture arch_imp of w7x_timing_v1_0 is
     signal clk_int   : std_logic := '0';
     
 begin
----- 10MHz clock switch
-clock10MHz: process(clk20_in) begin
-  if rising_edge(clk20_in) then
-    clk_int <= not clk_int;
-  end if;
-end process clock10MHz;
-clk <= clk_in when c_extclk = '1' else clk_int;
+clk <= clk_ext_in when c_extclk = '1' else clk_int_in;
 
-trigger    <= c_trig or trig_in;
+trigger    <= c_trig or trg_in;
 power_down <= c_extclk;
 ---- BRAM
 bram_clka   <= clk_axi_in;

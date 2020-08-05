@@ -43,7 +43,7 @@ set_property physical_name bram_addrb [ipx::get_port_maps ADDR -of_objects [ipx:
 
 # Set FREQ_HZ on s00_axi
 ipx::add_bus_parameter FREQ_HZ [ipx::get_bus_interfaces s00_axi -of_objects [ipx::current_core]]
-set_property value 125000000 [ipx::get_bus_parameters FREQ_HZ -of_objects [ipx::get_bus_interfaces s00_axi -of_objects [ipx::current_core]]]
+set_property value 250000000 [ipx::get_bus_parameters FREQ_HZ -of_objects [ipx::get_bus_interfaces s00_axi -of_objects [ipx::current_core]]]
 
 
 # Add MDD to SoftwareDriverGroup

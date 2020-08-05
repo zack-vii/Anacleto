@@ -13,11 +13,6 @@ timing_SOURCES = \
 	src/w7x_timing.vhd \
 	src/w7x_timing.xdc
 timing_IPCFG = src/w7x_timing_setup.tcl
-timing_DRV_LINUX = \
-	linux/rptiming.h \
-	linux/rptiming.c \
-	linux/rptiming_lib.c \
-	linux/rptiming_test.c
 
 ## PROJECTS ##
 vivado_PROJECTS = timing_brd
@@ -26,12 +21,22 @@ timing_brd_IP_SOURCES = timing_1.0
 timing_brd_SOURCES = \
 	prj_src/system.bd \
 	prj_src/hdl/system_wrapper.v \
-	prj_src/red_pitaya.xdc
+	prj_src/redpitaya.xdc
 timing_brd_PRJCFG = prj_src/w7x_timing_brd_setup.tcl
-#timing_brd_ARCHIVE = $(NAME).zip
 
 .PHONY: linux
 linux:
-	$(MAKE) $(AM_MAKEFLAGS) -C linux clean all
+	$(MAKE) $(AM_MAKEFLAGS) -C linux all
 
-all: cores projects dtb linux bitstream
+
+clean-local::
+	$(RM) -rf ip prj edit
+
+mostly-clean::
+	@$(RM) *_jou.tcl *.backup.tcl\
+	;$(RM) -rf $(addprefix prj_src/,hw_handoff ip ipshared ui system.bxml system_ooc.xdc)
+
+clean::
+	@$(MAKE) $(AM_MAKEFLAGS) -C linux clean
+
+all: linux cores projects bitstream

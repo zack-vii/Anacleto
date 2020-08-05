@@ -1,8 +1,8 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Wed Aug  5 15:42:36 2020
-//Host        : mds-data-1 running 64-bit unknown
+//Date        : Wed Aug  5 19:40:13 2020
+//Host        : mds-data-1 running 64-bit Ubuntu 16.04.6 LTS
 //Command     : generate_target system.bd
 //Design      : system
 //Purpose     : IP block netlist
@@ -656,7 +656,7 @@ module system
   assign state1[7:2] = w7x_timing_0_state_do;
   assign state_leds[7:0] = w7x_timing_0_state_led;
   assign trig_in_1 = trg_in;
-  system_processing_system7_0_axi_periph_0 axi_intercon
+  system_axi_intercon_0 axi_intercon
        (.ACLK(processing_system7_0_FCLK_CLK0),
         .ARESETN(rst_processing_system7_0_125M_interconnect_aresetn),
         .M00_ACLK(processing_system7_0_FCLK_CLK0),
@@ -720,7 +720,7 @@ module system
         .S00_AXI_wready(processing_system7_0_M_AXI_GP0_WREADY),
         .S00_AXI_wstrb(processing_system7_0_M_AXI_GP0_WSTRB),
         .S00_AXI_wvalid(processing_system7_0_M_AXI_GP0_WVALID));
-  system_blk_mem_gen_0_0 bram
+  system_bram_0 bram
        (.addra(w7x_timing_0_BRAM_PORTA_ADDR),
         .addrb(w7x_timing_0_BRAM_PORTB_ADDR),
         .clka(w7x_timing_0_BRAM_PORTA_CLK),
@@ -732,9 +732,9 @@ module system
         .ena(w7x_timing_0_BRAM_PORTA_EN),
         .wea(w7x_timing_0_BRAM_PORTA_WE),
         .web(1'b0));
-  system_xlconstant_0_0 gnd
+  system_gnd_0 gnd
        (.dout(xlconstant_0_dout));
-  system_processing_system7_0_0 proc_sys7
+  system_proc_sys7_0 proc_sys7
        (.CAN0_PHY_RX(1'b0),
         .DDR_Addr(DDR_addr[14:0]),
         .DDR_BankAddr(DDR_ba[2:0]),
@@ -805,7 +805,7 @@ module system
         .SPI0_SCLK_I(1'b0),
         .SPI0_SS_I(1'b0),
         .USB0_VBUS_PWRFAULT(1'b0));
-  system_rst_processing_system7_0_125M_0 proc_sys_reset
+  system_proc_sys_reset_0 proc_sys_reset
        (.aux_reset_in(1'b1),
         .dcm_locked(1'b1),
         .ext_reset_in(processing_system7_0_FCLK_RESET0_N),
@@ -813,7 +813,7 @@ module system
         .mb_debug_sys_rst(1'b0),
         .peripheral_aresetn(rst_processing_system7_0_125M_peripheral_aresetn),
         .slowest_sync_clk(processing_system7_0_FCLK_CLK0));
-  system_w7x_timing_0_0 timing
+  system_timing_0 timing
        (.bram_addra(w7x_timing_0_BRAM_PORTA_ADDR),
         .bram_addrb(w7x_timing_0_BRAM_PORTB_ADDR),
         .bram_clka(w7x_timing_0_BRAM_PORTA_CLK),
@@ -824,8 +824,8 @@ module system
         .bram_ena(w7x_timing_0_BRAM_PORTA_EN),
         .bram_wea(w7x_timing_0_BRAM_PORTA_WE),
         .clk_axi_in(processing_system7_0_FCLK_CLK0),
-        .clk_ext_in(clk_1),
-        .clk_int_in(proc_sys7_FCLK_CLK1),
+        .clk_ext_in(1'b0),
+        .clk_int_in(1'b0),
         .s00_axi_araddr(processing_system7_0_axi_periph_M00_AXI_ARADDR[18:0]),
         .s00_axi_arprot(processing_system7_0_axi_periph_M00_AXI_ARPROT),
         .s00_axi_arready(processing_system7_0_axi_periph_M00_AXI_ARREADY),
@@ -848,10 +848,10 @@ module system
         .s00_axi_wvalid(processing_system7_0_axi_periph_M00_AXI_WVALID),
         .state_do(w7x_timing_0_state_do),
         .state_led(w7x_timing_0_state_led),
-        .trg_in(trig_in_1));
+        .trg_in(1'b0));
 endmodule
 
-module system_processing_system7_0_axi_periph_0
+module system_axi_intercon_0
    (ACLK,
     ARESETN,
     M00_ACLK,

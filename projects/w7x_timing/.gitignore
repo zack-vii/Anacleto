@@ -1,0 +1,6 @@
+prj/
+prj_src/hw_handoff/
+prj_src/ipshared/
+prj_src/system.bxml
+prj_src/system_ooc.xdc
+linux/rptrig

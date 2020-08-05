@@ -1,0 +1,10 @@
+[Unit]
+Description=rptrig server
+After=network.target rptrig_fpga.service
+
+[Service]
+ExecStart=/bin/rptrig
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,15 +1,16 @@
 #!/bin/sh
-src=$(realpath $(dirname ${0}))
+src=$(realpath $(dirname $0))
+u512=$src/../user512
 name=$1
 makedest () {
 dest=~/rp/${name}$1
-mkdir -p ${dest}
+mkdir -p $dest
 }
 makedest /
-cp -rf ${src}/rp/* $dest
+cp -rf $src/rp/* $dest
 makedest /boot
-cp ${src}/logic/sdk/dts/devicetree.dtb ${src}/../../uImage $dest
+cp $u512/devicetree.dtb $src/../../uImage $dest
 makedest /root
-cp ${src}/logic/out/red_pitaya.bit ${src}/src/w7x_timing.ko $dest
+cp $src/out/rptrig.bit $u512/linux/user512.ko $dest
 makedest /lib
-cp ${src}/src/libw7x_timing_lib.so $dest
+cp $src/out/librptrig.so $dest

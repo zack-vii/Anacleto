@@ -22,7 +22,8 @@ INIT_REARM   = 7
 INIT_REINIT  = 15
 MAX_STATUS   = 8
 MAX_SAMPLES  = 54272
-class struct_w7x_timing(object):
+
+class struct_rptrig(object):
     class _Device(_c.Structure):
         _fields_=[
               ("status",_c.c_ubyte*MAX_STATUS),
@@ -52,15 +53,19 @@ class struct_w7x_timing(object):
              ]
     def __init__(self,iface):
         self.ptr = _c.c_void_p(0)
-        iface.cdll.get_w7x_timing(_c.byref(self.ptr))
+        iface.cdll.get_rptrig(_c.byref(self.ptr))
     @property
-    def device(self):   return _c.cast(self.ptr,_c.POINTER(struct_w7x_timing._Device)).contents
+    def device(self):
+        return _c.cast(self.ptr,_c.POINTER(struct_rptrig._Device)).contents
     @property
-    def sections(self): return _c.cast(self.ptr,_c.POINTER(struct_w7x_timing._Sections)).contents
+    def sections(self):
+        return _c.cast(self.ptr,_c.POINTER(struct_rptrig._Sections)).contents
     @property
-    def status(self):   return tuple(self.sections.status)
+    def status(self):
+        return tuple(self.sections.status)
     @property
-    def control(self):  return tuple(self.sections.control)
+    def control(self):
+        return tuple(self.sections.control)
     @property
     def header(self):
         d = self.device
@@ -70,12 +75,13 @@ class struct_w7x_timing(object):
         d = self.device
         return d.times[0:d.count]
     def __str__(self):
-        return "w7x_timing"+str(d.header)
-    def __repr__(self): return str(self)
+        return "rptrig"+str(d.header)
+    def __repr__(self):
+        return str(self)
 
 """ SERVER INTERFACE """
 
-class w7x_timing(object):
+class rptrig(object):
     _lock = _t.Lock()
     _NULL = _c.c_void_p(None)
     @staticmethod
@@ -99,17 +105,17 @@ class w7x_timing(object):
         return (delay,width,period,burst,cycle,repeat)
     @staticmethod
     def _byref(*args):
-        return tuple((w7x_timing._NULL if a is None else _c.byref(a)) for a in args)
+        return tuple((rptrig._NULL if a is None else _c.byref(a)) for a in args)
     def __init__(self):
         self._stop = False
         try:
-            self.cdll = _c.CDLL('libw7x_timing_lib.so')
+            self.cdll = _c.CDLL('librptrig.so')
             self.cdll.getError.restype=_c.c_void_p
             self._error = _c.cast(self.cdll.getError(),_c.c_char_p)
-            self.dev = struct_w7x_timing(self)
+            self.dev = struct_rptrig(self)
             if self.state == STATE_IDLE[1]: self.tryExt()
         except OSError as exc:
-            print('w7x_timing: '+ str(exc))
+            print('rptrig: '+ str(exc))
             raise
     def tryExt(self):
         from time import sleep
@@ -131,31 +137,31 @@ class w7x_timing(object):
     def disarm(self):
         self.cdll.disarm()
     def makeClock(self,delay=None,width=None,period=None,burst=None,cycle=None,repeat=None):
-        args = w7x_timing._toctypes(delay,width,period,burst,cycle,repeat)
-        delay,width,period,burst,cycle,repeat = w7x_timing._byref(*args)
+        args = rptrig._toctypes(delay,width,period,burst,cycle,repeat)
+        delay,width,period,burst,cycle,repeat = rptrig._byref(*args)
         self.cdll.makeClock(delay,width,period,burst,cycle,repeat)
     def makeSequence(self,delay=None,width=None,period=None,burst=None,cycle=None,repeat=None,times=[]):
         times = _n.ascontiguousarray(times,dtype=_n.uint64)
         timref= times.ctypes.data_as(_c.POINTER(_c.c_uint64))
-        args  = w7x_timing._toctypes(delay,width,period,burst,cycle,repeat,len(times))
-        delay,width,period,burst,cycle,repeat,count = w7x_timing._byref(*args)
+        args  = rptrig._toctypes(delay,width,period,burst,cycle,repeat,len(times))
+        delay,width,period,burst,cycle,repeat,count = rptrig._byref(*args)
         self.cdll.makeSequence(delay,width,period,burst,cycle,repeat,count,timref)
     def reinit(self,delay=None):
         delay = None if delay  is None else _c.c_uint64(int(delay))
-        ref   = w7x_timing._NULL if delay is None else _c.byref(delay)
+        ref   = rptrig._NULL if delay is None else _c.byref(delay)
         self.cdll.reinit(ref)
     def trig(self):
         self.cdll.trig()
     def extclk(self,value):
         self.cdll.extclk(_c.c_int8(-1) if value else _c.c_int8(0))
     def gate(self,value=0):
-        value = w7x_timing._tobyte(value)
+        value = rptrig._tobyte(value)
         self.cdll.gate(_c.c_uint8(value))
     def gate2(self,value=0):
-        value = w7x_timing._tobyte(value)
+        value = rptrig._tobyte(value)
         self.cdll.gate2(_c.c_uint8(value))
     def invert(self,value=0):
-        value = w7x_timing._tobyte(value)
+        value = rptrig._tobyte(value)
         self.cdll.invert(_c.c_uint8(value))
     @property
     def error(self):
@@ -165,8 +171,8 @@ class w7x_timing(object):
         return self.cdll.getState()
     @property
     def params(self):
-        args = w7x_timing._toctypes(0,0,0,0,0,0,0)
-        refs = w7x_timing._byref(*args)
+        args = rptrig._toctypes(0,0,0,0,0,0,0)
+        refs = rptrig._byref(*args)
         self.cdll.getParams(*refs)
         return tuple(int(a.value) for a in args)
     def stop(self): self._stop = True
@@ -186,21 +192,21 @@ class w7x_timing(object):
         except _s.error as msg:
             print 'Listen failed (%d): %s'%(msg[0],msg[1])
             return
-        self.logger = w7x_timing.Logger(port+1,self)
+        self.logger = rptrig.Logger(port+1,self)
         self.logger.start()
         try:
             while not self._stop:
                 try:
                     conn, addr = sock.accept()
-                    w7x_timing.Handler(conn,addr,self).start()
+                    rptrig.Handler(conn,addr,self).start()
                 except KeyboardInterrupt:
                     raise
                 except Exception as e:
                     print(e)
         finally:
             sock.close()
-            with w7x_timing._lock:
-                handlers = list(w7x_timing.Handler._set)
+            with rptrig._lock:
+                handlers = list(rptrig.Handler._set)
             for handler in handlers:
                 handler.stop()
             self.logger.stop()
@@ -210,7 +216,7 @@ class w7x_timing(object):
 
     class Logger(_t.Thread):
         def __init__(self,port,iface):
-            super(w7x_timing.Logger,self).__init__(name='logger:%d'%(port,))
+            super(rptrig.Logger,self).__init__(name='logger:%d'%(port,))
             self.port = port
             self.iface = iface
             self._stop = False
@@ -243,13 +249,13 @@ class w7x_timing(object):
     class Handler(_t.Thread):
         _set = set()
         def __init__(self,conn,addr,iface):
-            super(w7x_timing.Handler,self).__init__(name='%s:%d'%addr)
+            super(rptrig.Handler,self).__init__(name='%s:%d'%addr)
             conn.settimeout(10)
             self.conn = conn
             self.iface = iface
             self._stop = False
-            with w7x_timing._lock:
-                w7x_timing.Handler._set.add(self)
+            with rptrig._lock:
+                rptrig.Handler._set.add(self)
         def stop(self): self._stop = True
         def senderror(self):
             msg = str(self.iface.error)
@@ -260,8 +266,8 @@ class w7x_timing(object):
                 while not self._stop:
                     try:
                       head = self.conn.recv(7)
-                      with w7x_timing._lock:
-                        if not head.startswith('W7X'):
+                      with rptrig._lock:
+                        if not head.startswith('RPT'):
                             if len(head)>0:
                                 raise Exception('Invalid header "%s"'%(head,))
                             raise Exception('Connection closed')
@@ -320,8 +326,8 @@ class w7x_timing(object):
             finally:
                 self.conn.close()
                 del(self.conn)
-                with w7x_timing._lock:
-                    w7x_timing.Handler._set.remove(self)
+                with rptrig._lock:
+                    rptrig.Handler._set.remove(self)
 
 
 """ UNIT TEST """
@@ -330,7 +336,7 @@ import unittest as _u
 class Test(_u.TestCase):
     def local(self):
         from time import sleep
-        dev = w7x_timing()
+        dev = rptrig()
         dev.disarm();
         dev.reinit(),
         self.assertEqual(dev.error.strip(),"MAKE CLOCK: DELAY: 600000000, WIDTH: 5, PERIOD: 10, BURST: 0, CYCLE: 0, REPEAT: 0, COUNT: 1")
@@ -371,9 +377,9 @@ if __name__=="__main__":
     if len(sys.argv)>1:
         try:
             port = int(sys.argv[1])
-            w7x_timing().run(port)
+            rptrig().run(port)
         except ValueError:
             test()
     else:
-        w7x_timing().run(5000)
+        rptrig().run(5000)
 

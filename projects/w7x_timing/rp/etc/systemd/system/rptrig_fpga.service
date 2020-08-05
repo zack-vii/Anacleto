@@ -1,0 +1,11 @@
+[Unit]
+Description=load rptrig module into fpga
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "/bin/cat /root/rptrig.bit > /dev/xdevcfg;/sbin/insmod /root/user512.ko"
+ExecStop=/sbin/rmmod user512.ko
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
