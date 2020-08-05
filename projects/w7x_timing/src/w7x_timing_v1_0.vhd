@@ -178,7 +178,6 @@ architecture arch_imp of w7x_timing_v1_0 is
     alias  gate2     : std_logic is s_addr(0);
 
     signal clk       : std_logic := '0';
-    signal clk_int   : std_logic := '0';
     
 begin
 clk <= clk_ext_in when c_extclk = '1' else clk_int_in;

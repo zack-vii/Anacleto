@@ -1,5 +1,5 @@
 linux/*.ko
 linux/*.mod.*
-linux/user512
+linux/usermem
 devicetree.dts
 devicetree.dtb

@@ -13,9 +13,9 @@ AX_CONFIG_FILES(
  w7x_timing/Makefile
  w7x_timing/linux/Makefile
 
- user512/Makefile
- user512/linux/Makefile
- user512/linux/Kbuild
+ usermem/Makefile
+ usermem/linux/Makefile
+ usermem/linux/Kbuild
 
  prova/Makefile
 

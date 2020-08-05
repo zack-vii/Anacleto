@@ -1462,7 +1462,7 @@
           <spirit:segment>
             <spirit:name>SEG_timing_reg0</spirit:name>
             <spirit:displayName>/timing/s00_axi/reg0</spirit:displayName>
-            <spirit:addressOffset>0x43C00000</spirit:addressOffset>
+            <spirit:addressOffset>0x44000000</spirit:addressOffset>
             <spirit:range>4M</spirit:range>
           </spirit:segment>
         </spirit:segments>

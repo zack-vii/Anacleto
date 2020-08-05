@@ -1,8 +1,8 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Wed Aug  5 23:47:14 2020
-//Host        : mds-data-1 running 64-bit unknown
+//Date        : Wed Aug  5 22:59:10 2020
+//Host        : mds-data-1 running 64-bit Ubuntu 16.04.6 LTS
 //Command     : generate_target system.bd
 //Design      : system
 //Purpose     : IP block netlist

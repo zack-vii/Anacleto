@@ -4,9 +4,9 @@
 		#size-cells = <1>;
 		compatible = "simple-bus";
 		ranges ;
-		user512@43c00000 {
-			compatible = "user512";
-			reg = <0x43c00000 0x80000>;
+		usermem@43c00000 {
+			compatible = "usermem";
+			reg = <0x44000000 0x400000>;
 		};
 	};
 };

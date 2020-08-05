@@ -9,7 +9,7 @@
 #include <linux/fs.h>
 #include <linux/platform_device.h>
 
-#include "user512.h"
+#include "usermem.h"
 
 static struct platform_device *s_pdev = 0;
 static int s_device_open = 0;
@@ -212,7 +212,7 @@ static long device_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 static int id_major;
 static struct class *pwmgen_class;
 
-static int user512_probe(struct platform_device *pdev) {
+static int usermem_probe(struct platform_device *pdev) {
 	struct resource *r_mem;
 	struct device *dev = &pdev->dev;
 	s_pdev = pdev;
@@ -244,7 +244,7 @@ static int user512_probe(struct platform_device *pdev) {
 	return C_OK;
 }
 
-static int user512_remove(struct platform_device *pdev) {
+static int usermem_remove(struct platform_device *pdev) {
 	printk("PLATFORM DEVICE REMOVE...\n");
 	if(pwmgen_class)
 	{
@@ -255,33 +255,33 @@ static int user512_remove(struct platform_device *pdev) {
 	return C_OK;
 }
 
-static const struct of_device_id user512_of_match_table[] = {
-	{ .compatible = "user512",},
+static const struct of_device_id usermem_of_match_table[] = {
+	{ .compatible = "usermem",},
 	{}
 };
 
-static struct platform_driver user512_driver = {
+static struct platform_driver usermem_driver = {
 	.driver = {
 			.name  = MODULE_NAME,
 		.owner = THIS_MODULE,
-			.of_match_table = user512_of_match_table,
+			.of_match_table = usermem_of_match_table,
 	},
-	.probe = user512_probe,
-	.remove = user512_remove,
+	.probe = usermem_probe,
+	.remove = usermem_remove,
 };
 
-static int __init user512_init(void)
+static int __init usermem_init(void)
 {
-	printk(KERN_INFO "inizializing AXI user512 module ...\n");
-	return platform_driver_register(&user512_driver);
+	printk(KERN_INFO "inizializing AXI usermem module ...\n");
+	return platform_driver_register(&usermem_driver);
 }
 
-static void __exit user512_exit(void)
+static void __exit usermem_exit(void)
 {
 	printk(KERN_INFO "exiting AXI rptiming module ...\n");
-	platform_driver_unregister(&user512_driver);
+	platform_driver_unregister(&usermem_driver);
 }
 
-module_init(user512_init);
-module_exit(user512_exit);
+module_init(usermem_init);
+module_exit(usermem_exit);
 MODULE_LICENSE("GPL");

@@ -3,5 +3,5 @@
 ../../uImage		kernel
 dts/devicetree.dts	ascii devicetree
 dts/devicetree.dtb	binary device tree place with uImage in /boot
-linux/user512		test module
-linux/user512.ko	kernel module insmod <file>
+linux/usermem		test module
+linux/usermem.ko	kernel module insmod <file>

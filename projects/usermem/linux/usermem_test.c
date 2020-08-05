@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "user512.h"
+#include "usermem.h"
 
 int main(int argc, char *argv[])
 {
-	user512_t *dev = user512_open(NULL);
+	usermem_t *dev = usermem_open(NULL);
 	if (!dev)
 		exit(-1);
 	int i;
@@ -16,5 +16,5 @@ int main(int argc, char *argv[])
 		usleep(10000);
 	}
 	dev->raw[8] = 0;
-	exit(user512_close(dev));
+	exit(usermem_close(dev));
 }

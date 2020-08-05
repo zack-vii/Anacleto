@@ -15,12 +15,12 @@ extern "C" {
 #define USER512_IOCTL_BASE	'W'
 #define USER512_RESOFFSET _IO(USER512_IOCTL_BASE, 0)
 
-#define DEVICE_NAME	"user512"  /* Dev name as it appears in /proc/devices */
-#define MODULE_NAME	"user512"
-#define MAX_SIZE	0x80000
+#define DEVICE_NAME	"usermem"  /* Dev name as it appears in /proc/devices */
+#define MODULE_NAME	"usermem"
+#define MAX_SIZE	0x400000
 typedef struct {
 	char raw[MAX_SIZE];
-} user512_t;
+} usermem_t;
 
 #ifndef __KERNEL__
 // api functions here //
@@ -31,7 +31,7 @@ typedef struct {
 #include <sys/mman.h>
 #include <inttypes.h>
 
-user512_t *const user512_open(const char *dev_file)
+usermem_t *const usermem_open(const char *dev_file)
 {
 	int fd;
 	if(dev_file)
@@ -43,13 +43,13 @@ user512_t *const user512_open(const char *dev_file)
 		printf("ERROR: failed to open device file\n");
 		return NULL;
 	}
-	user512_t *const dev = (user512_t*)mmap(NULL, MAX_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	usermem_t *const dev = (usermem_t*)mmap(NULL, MAX_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if(!dev)
 		printf("ERROR: failed to mmap device memory\n");
 	return dev;
 }
 
-const int user512_close(user512_t *const dev)
+const int usermem_close(usermem_t *const dev)
 {
 	if(dev)
 		return munmap(dev, MAX_SIZE);

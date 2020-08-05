@@ -6,8 +6,8 @@ AM_CPPFLAGS  = -lpthread
 
 O := $(abs_srcdir)/..
 
-MODULES = user512
-TEST_EXAMPLES = user512
+MODULES = usermem
+TEST_EXAMPLES = usermem
 RUN_LIBRARY =
 
 MOSTLYCLEANFILES = $(TEST_EXAMPLES) $(RUN_LIBRARY_SO)

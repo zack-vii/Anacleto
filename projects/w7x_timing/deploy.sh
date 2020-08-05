@@ -12,7 +12,7 @@ if [ "0$2" -ge "1" ]
 then
   if [ "0$2" -ge "2" ]
   then
-    if [ "0$2" -ge "3" ] && [ ! "$RPp" -eq "$RP" ]
+    if [ "0$2" -ge "3" ] && [ "$RPp" != "$RP" ]
     then
       echo default password is 'root'
       ssh-copy-id $RP
@@ -24,24 +24,24 @@ then
     if [ "$RPp" != "$RP" ]
     then ssh $RP ". /etc/profile&&rw&&mount -o remount,rw /boot&&echo ok||echo failed"
     fi
-    scp $S/../user512/devicetree.dtb $S/../../uImage $RPp/boot/
-    scp $S/../user512/linux/user512.ko $RPp/root/
+    scp $S/../usermem/devicetree.dtb $S/../../uImage $RPp/boot/
+    scp $S/../usermem/linux/usermem.ko $RPp/root/
   fi
   scp -r $S/rp/* $RPp/
   scp $S/out/lib*.so $RPp/lib/
   scp $S/out/rptrig.bit $RPp/root/
-  if [ "$RPp" = "$RP" ]
+  if [ "$RPp" != "$RP" ]
   then
-    ssh $RP systemctl disable rptrig rptrig_fpga
-    ssh $RP systemctl enable rptrig rptrig_fpga
+    ssh $RP "systemctl disable rptrig rptrig_fpga;
+             systemctl enable rptrig rptrig_fpga"
   fi
 fi
 
-if [ "$RPp" = "$RP" ]
+if [ "$RPp" != "$RP" ]
 then
   if [ "0$2" -ge "2" ]
   then
-    ssh $RP reboot
+    ssh $RP "sync;sync;reboot"
   else
     ssh $RP systemctl stop rptrig
     ssh $RP /bin/rptrig test

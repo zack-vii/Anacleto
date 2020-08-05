@@ -1,5 +1,5 @@
 #pragma once
-#include "user512.h"
+#include "usermem.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,7 +32,7 @@ typedef unsigned long long	uint64_t;
 
 typedef union
 {
-	user512_t raw;
+	usermem_t raw;
 # pragma pack(1) // manual packing aligned 64 bit
 	struct
 	{

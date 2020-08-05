@@ -5,7 +5,7 @@ OUT = $(DTS) $(DTB)
 DTC ?= dtc
 DTS = devicetree.dts
 DTB = devicetree.dtb
-DTSI = dts/user512.dtsi
+DTSI = dts/usermem.dtsi
 DTRAW = dts/dtraw.dts
 
 $(DTS):	$(DTRAW)

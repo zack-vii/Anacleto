@@ -45,7 +45,7 @@ static int open_dev(int *pos)
 	pthread_mutex_lock(&dev_lock);
 	if (!dev)
 	{
-		dev = (rptrig_t *)user512_open(NULL);
+		dev = (rptrig_t *)usermem_open(NULL);
 		if (!dev)
 		{
 			*pos += sprintf(error+*pos, "ERROR: unable to get device\n");
@@ -83,7 +83,7 @@ int PREFIX(GetDevice)(rptrig_t **dev_p)
 
 int PREFIX(Close)()
 {
-	return dev ? user512_close((void*)dev) : 0;
+	return dev ? usermem_close((void*)dev) : 0;
 }
 
 int PREFIX(GetClock)(uint64_t * clock)
