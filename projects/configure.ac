@@ -12,7 +12,11 @@ AX_CONFIG_FILES(
  rfx_nioadc/linux/src/Kbuild
  w7x_timing/Makefile
  w7x_timing/linux/Makefile
- w7x_timing/linux/Kbuild
+
+ user512/Makefile
+ user512/linux/Makefile
+ user512/linux/Kbuild
+
  prova/Makefile
 
  rfx_dmatests/Makefile
