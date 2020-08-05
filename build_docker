@@ -1,0 +1,2 @@
+#!/bin/sh
+docker build --network=host -t anacleto $(dirname $0)/docker
