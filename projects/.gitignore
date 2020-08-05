@@ -74,6 +74,8 @@ xvlog.*
 ## checkpoint files
 *.dcp
 
+
+*.hwdef
 *_jou.tcl
 vivado_project/
 ip/
@@ -88,4 +90,3 @@ edit/
 .tmp_versions/
 Module.symvers
 modules.order
-
