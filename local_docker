@@ -1,0 +1,7 @@
+docker run\
+ -v /git/Anacleto:/git/Anacleto\
+ -v /raid1/Xilinx:/opt/Xilinx\
+ -it --network=host\
+ -e HOME=/git/Anacleto/home\
+ -u $(id -u)\
+ anacleto /bin/bash

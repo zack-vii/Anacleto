@@ -1,0 +1,12 @@
+#!/bin/bash
+set +e
+cd $(dirname $0)
+rm -f .config*
+./configure\
+	--with-linux-url=https://github.com/RedPitaya/linux-xlnx/archive/branch-redpitaya-v2017.2.tar.gz\
+	--with-vivado-version=2017.2\
+	--with-toolchain-dir=/opt/Xilinx/SDK/2017.2/gnu/aarch32/lin/gcc-arm-linux-gnueabi\
+	--with-cross-compile=arm-linux-gnueabihf-\
+	--enable-custom-toolchain\
+	;
+
