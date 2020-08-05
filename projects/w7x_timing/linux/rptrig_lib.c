@@ -417,7 +417,7 @@ int PREFIX(SetGate2)(uint8_t val)
 	return C_OK;
 }
 
-int PREFIX(SetExtClock)(int val)
+int PREFIX(SetClockExt)(int val)
 {
 	INIT_DEVICE
 	dev->w_extclk = val ? -1 : 0;

@@ -53,7 +53,7 @@ class struct_rptrig(object):
              ]
     def __init__(self,iface):
         self.ptr = _c.c_void_p(0)
-        iface.cdll.get_rptrig(_c.byref(self.ptr))
+        iface.cdll.RPTRIG_GetDevice(_c.byref(self.ptr))
     @property
     def device(self):
         return _c.cast(self.ptr,_c.POINTER(struct_rptrig._Device)).contents
@@ -110,8 +110,8 @@ class rptrig(object):
         self._stop = False
         try:
             self.cdll = _c.CDLL('librptrig.so')
-            self.cdll.getError.restype=_c.c_void_p
-            self._error = _c.cast(self.cdll.getError(),_c.c_char_p)
+            self.cdll.RPTRIG_GetError.restype=_c.c_void_p
+            self._error = _c.cast(self.cdll.RPTRIG_GetError(),_c.c_char_p)
             self.dev = struct_rptrig(self)
             if self.state == STATE_IDLE[1]: self.tryExt()
         except OSError as exc:
@@ -131,49 +131,49 @@ class rptrig(object):
         self.disarm()
         return hasext
     def arm(self):
-        self.cdll.arm()
+        self.cdll.RPTRIG_Arm()
     def rearm(self):
-        self.cdll.rearm()
+        self.cdll.RPTRIG_Rearm()
     def disarm(self):
-        self.cdll.disarm()
+        self.cdll.RPTRIG_Disarm()
     def makeClock(self,delay=None,width=None,period=None,burst=None,cycle=None,repeat=None):
         args = rptrig._toctypes(delay,width,period,burst,cycle,repeat)
         delay,width,period,burst,cycle,repeat = rptrig._byref(*args)
-        self.cdll.makeClock(delay,width,period,burst,cycle,repeat)
+        self.cdll.RPTRIG_MakeClock(delay,width,period,burst,cycle,repeat)
     def makeSequence(self,delay=None,width=None,period=None,burst=None,cycle=None,repeat=None,times=[]):
         times = _n.ascontiguousarray(times,dtype=_n.uint64)
         timref= times.ctypes.data_as(_c.POINTER(_c.c_uint64))
         args  = rptrig._toctypes(delay,width,period,burst,cycle,repeat,len(times))
         delay,width,period,burst,cycle,repeat,count = rptrig._byref(*args)
-        self.cdll.makeSequence(delay,width,period,burst,cycle,repeat,count,timref)
+        self.cdll.RPTRIG_MakeSequence(delay,width,period,burst,cycle,repeat,count,timref)
     def reinit(self,delay=None):
         delay = None if delay  is None else _c.c_uint64(int(delay))
         ref   = rptrig._NULL if delay is None else _c.byref(delay)
-        self.cdll.reinit(ref)
+        self.cdll.RPTRIG_Reinit(ref)
     def trig(self):
-        self.cdll.trig()
+        self.cdll.RPTRIG_Trig()
     def extclk(self,value):
-        self.cdll.extclk(_c.c_int8(-1) if value else _c.c_int8(0))
+        self.cdll.RPTRIG_SetClockExt(_c.c_int8(-1) if value else _c.c_int8(0))
     def gate(self,value=0):
         value = rptrig._tobyte(value)
-        self.cdll.gate(_c.c_uint8(value))
+        self.cdll.RPTRIG_SetGate(_c.c_uint8(value))
     def gate2(self,value=0):
         value = rptrig._tobyte(value)
-        self.cdll.gate2(_c.c_uint8(value))
+        self.cdll.RPTRIG_SetGate2(_c.c_uint8(value))
     def invert(self,value=0):
         value = rptrig._tobyte(value)
-        self.cdll.invert(_c.c_uint8(value))
+        self.cdll.RPTRIG_SetInvert(_c.c_uint8(value))
     @property
     def error(self):
         return str(self._error.value)
     @property
     def state(self):
-        return self.cdll.getState()
+        return self.cdll.RPTRIG_GetState()
     @property
     def params(self):
         args = rptrig._toctypes(0,0,0,0,0,0,0)
         refs = rptrig._byref(*args)
-        self.cdll.getParams(*refs)
+        self.cdll.RPTRIG_GetParams(*refs)
         return tuple(int(a.value) for a in args)
     def stop(self): self._stop = True
     def run(self,port):
@@ -215,7 +215,7 @@ class rptrig(object):
             self.logger.join()
 
     class Logger(_t.Thread):
-        def __init__(self,port,iface):
+        def __init__(self, port, iface):
             super(rptrig.Logger,self).__init__(name='logger:%d'%(port,))
             self.port = port
             self.iface = iface
@@ -225,14 +225,15 @@ class rptrig(object):
             except _s.error as msg:
                 print('Logger socket init failed (%d): %s'%(msg[0],msg[1]))
                 raise
-        def send_control(self,control):
+        def send_control(self, control):
             try:
                 self.sock.sendto(_p.pack('<BBBBBBBB',*control),('',self.port))
             except KeyboardInterrupt:
                 raise
             except Exception as e:
                 print(e)
-        def stop(self): self._stop = True
+        def stop(self):
+            self._stop = True
         def run(self):
             from time import sleep
             old_control = (0,0,0,0,0,0,0,0)
@@ -244,7 +245,7 @@ class rptrig(object):
                         old_control = control
                         self.send_control(control)
             finally:
-                sock.close()
+                self.sock.close()
 
     class Handler(_t.Thread):
         _set = set()
