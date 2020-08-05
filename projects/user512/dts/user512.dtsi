@@ -1,0 +1,12 @@
+/ {
+	amba_pl: amba_pl {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "simple-bus";
+		ranges ;
+		user512@43c00000 {
+			compatible = "user512";
+			reg = <0x43c00000 0x80000>;
+		};
+	};
+};

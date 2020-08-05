@@ -1,0 +1,5 @@
+linux/*.ko
+linux/*.mod.*
+linux/user512
+devicetree.dts
+devicetree.dtb

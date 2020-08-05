@@ -1,0 +1,5 @@
+
+obj = $(builddir)
+src = $(srcdir)
+
+obj-m += user512.o
