@@ -25,12 +25,15 @@ Makefile.in
 /stamp-h1
 
 /build*
-
-/fpga/xlnx-devicetree
+/fpga/xlnx-devicetree/
 /lib/
 /uImage
 
-/downloads
-/toolchain
-/.
+# docker home
+/.bash_history
+/.Xilinx
+
+# default tmp
 /linux
+/toolchain
+/downloads
