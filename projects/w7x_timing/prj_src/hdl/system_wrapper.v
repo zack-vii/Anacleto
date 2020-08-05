@@ -1,8 +1,8 @@
-//Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
+//Copyright 1986-2019 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
-//Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Fri Jul 31 02:07:52 2020
-//Host        : fc-ubu1-009 running 64-bit Ubuntu 18.04.4 LTS
+//Tool Version: Vivado v.2019.1 (lin64) Build 2552052 Fri May 24 14:47:09 MDT 2019
+//Date        : Wed Aug  5 04:56:07 2020
+//Host        : hp-6930p running 64-bit Debian GNU/Linux 10 (buster)
 //Command     : generate_target system_wrapper.bd
 //Design      : system_wrapper
 //Purpose     : IP block netlist
@@ -31,6 +31,9 @@ module system_wrapper
     FIXED_IO_ps_clk,
     FIXED_IO_ps_porb,
     FIXED_IO_ps_srstb,
+    USBIND_0_port_indctl,
+    USBIND_0_vbus_pwrfault,
+    USBIND_0_vbus_pwrselect,
     clk_in,
     state0,
     state1,
@@ -57,6 +60,9 @@ module system_wrapper
   inout FIXED_IO_ps_clk;
   inout FIXED_IO_ps_porb;
   inout FIXED_IO_ps_srstb;
+  output [1:0]USBIND_0_port_indctl;
+  input USBIND_0_vbus_pwrfault;
+  output USBIND_0_vbus_pwrselect;
   input clk_in;
   output [7:0]state0;
   output [7:2]state1;
@@ -84,6 +90,9 @@ module system_wrapper
   wire FIXED_IO_ps_clk;
   wire FIXED_IO_ps_porb;
   wire FIXED_IO_ps_srstb;
+  wire [1:0]USBIND_0_port_indctl;
+  wire USBIND_0_vbus_pwrfault;
+  wire USBIND_0_vbus_pwrselect;
   wire clk_in;
   wire [7:0]state0;
   wire [7:2]state1;
@@ -112,6 +121,9 @@ module system_wrapper
         .FIXED_IO_ps_clk(FIXED_IO_ps_clk),
         .FIXED_IO_ps_porb(FIXED_IO_ps_porb),
         .FIXED_IO_ps_srstb(FIXED_IO_ps_srstb),
+        .USBIND_0_port_indctl(USBIND_0_port_indctl),
+        .USBIND_0_vbus_pwrfault(USBIND_0_vbus_pwrfault),
+        .USBIND_0_vbus_pwrselect(USBIND_0_vbus_pwrselect),
         .clk_in(clk_in),
         .state0(state0),
         .state1(state1),

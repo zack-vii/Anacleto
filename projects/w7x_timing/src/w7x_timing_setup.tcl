@@ -2,6 +2,7 @@ puts " -------------------- "
 puts " W7X_TIMING_SETUP.TCL "
 puts " -------------------- "
 
+puts "A"
 
 # BRAM_PORTA
 ipx::add_bus_interface BRAM_PORTA [ipx::current_core]
@@ -23,6 +24,7 @@ set_property physical_name bram_wea [ipx::get_port_maps WE -of_objects [ipx::get
 ipx::add_port_map ADDR [ipx::get_bus_interfaces BRAM_PORTA -of_objects [ipx::current_core]]
 set_property physical_name bram_addra [ipx::get_port_maps ADDR -of_objects [ipx::get_bus_interfaces BRAM_PORTA -of_objects [ipx::current_core]]]
 
+puts "B"
 
 # BRAM_PORTB
 ipx::add_bus_interface BRAM_PORTB [ipx::current_core]
@@ -40,11 +42,13 @@ set_property physical_name bram_clkb [ipx::get_port_maps CLK -of_objects [ipx::g
 ipx::add_port_map ADDR [ipx::get_bus_interfaces BRAM_PORTB -of_objects [ipx::current_core]]
 set_property physical_name bram_addrb [ipx::get_port_maps ADDR -of_objects [ipx::get_bus_interfaces BRAM_PORTB -of_objects [ipx::current_core]]]
 
+puts "FREQ_HZ"
 
 # Set FREQ_HZ on s00_axi
 ipx::add_bus_parameter FREQ_HZ [ipx::get_bus_interfaces s00_axi -of_objects [ipx::current_core]]
 set_property value 125000000 [ipx::get_bus_parameters FREQ_HZ -of_objects [ipx::get_bus_interfaces s00_axi -of_objects [ipx::current_core]]]
 
+puts "MDD"
 
 # Add MDD to SoftwareDriverGroup
 ipx::add_file ./src/w7x_timing.mdd [ipx::get_file_groups xilinx_softwaredriver -of_objects [ipx::current_core]]

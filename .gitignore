@@ -26,11 +26,9 @@ Makefile.in
 
 /build*
 
-/fpga/xlnx-devicetree
 /lib/
 /uImage
 
 /downloads
-/toolchain
-/.
+/../../../../git/Anacleto
 /linux
