@@ -1,8 +1,8 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Wed Aug  5 19:40:13 2020
-//Host        : mds-data-1 running 64-bit Ubuntu 16.04.6 LTS
+//Date        : Wed Aug  5 23:47:14 2020
+//Host        : mds-data-1 running 64-bit unknown
 //Command     : generate_target system.bd
 //Design      : system
 //Purpose     : IP block netlist
@@ -637,7 +637,7 @@ module system
   wire processing_system7_0_axi_periph_M00_AXI_WVALID;
   wire [0:0]rst_processing_system7_0_125M_interconnect_aresetn;
   wire [0:0]rst_processing_system7_0_125M_peripheral_aresetn;
-  wire trig_in_1;
+  wire trg_in_1;
   wire [15:0]w7x_timing_0_BRAM_PORTA_ADDR;
   wire w7x_timing_0_BRAM_PORTA_CLK;
   wire [39:0]w7x_timing_0_BRAM_PORTA_DIN;
@@ -655,7 +655,7 @@ module system
   assign state0[7:0] = xlconstant_0_dout;
   assign state1[7:2] = w7x_timing_0_state_do;
   assign state_leds[7:0] = w7x_timing_0_state_led;
-  assign trig_in_1 = trg_in;
+  assign trg_in_1 = trg_in;
   system_axi_intercon_0 axi_intercon
        (.ACLK(processing_system7_0_FCLK_CLK0),
         .ARESETN(rst_processing_system7_0_125M_interconnect_aresetn),
@@ -824,8 +824,8 @@ module system
         .bram_ena(w7x_timing_0_BRAM_PORTA_EN),
         .bram_wea(w7x_timing_0_BRAM_PORTA_WE),
         .clk_axi_in(processing_system7_0_FCLK_CLK0),
-        .clk_ext_in(1'b0),
-        .clk_int_in(1'b0),
+        .clk_ext_in(clk_1),
+        .clk_int_in(proc_sys7_FCLK_CLK1),
         .s00_axi_araddr(processing_system7_0_axi_periph_M00_AXI_ARADDR[18:0]),
         .s00_axi_arprot(processing_system7_0_axi_periph_M00_AXI_ARPROT),
         .s00_axi_arready(processing_system7_0_axi_periph_M00_AXI_ARREADY),
@@ -848,7 +848,7 @@ module system
         .s00_axi_wvalid(processing_system7_0_axi_periph_M00_AXI_WVALID),
         .state_do(w7x_timing_0_state_do),
         .state_led(w7x_timing_0_state_led),
-        .trg_in(1'b0));
+        .trg_in(trg_in_1));
 endmodule
 
 module system_axi_intercon_0

@@ -163,12 +163,6 @@
           </spirit:wire>
         </spirit:port>
         <spirit:port>
-          <spirit:name>trg_in</spirit:name>
-          <spirit:wire>
-            <spirit:direction>in</spirit:direction>
-          </spirit:wire>
-        </spirit:port>
-        <spirit:port>
           <spirit:name>state1</spirit:name>
           <spirit:wire>
             <spirit:direction>out</spirit:direction>
@@ -196,6 +190,12 @@
               <spirit:left>7</spirit:left>
               <spirit:right>0</spirit:right>
             </spirit:vector>
+          </spirit:wire>
+        </spirit:port>
+        <spirit:port>
+          <spirit:name>trg_in</spirit:name>
+          <spirit:wire>
+            <spirit:direction>in</spirit:direction>
           </spirit:wire>
         </spirit:port>
       </spirit:ports>
@@ -878,10 +878,7 @@
       <spirit:adHocConnection>
         <spirit:name>clk_1</spirit:name>
         <spirit:externalPortReference spirit:portRef="clk_in"/>
-      </spirit:adHocConnection>
-      <spirit:adHocConnection>
-        <spirit:name>trig_in_1</spirit:name>
-        <spirit:externalPortReference spirit:portRef="trg_in"/>
+        <spirit:internalPortReference spirit:componentRef="timing" spirit:portRef="clk_ext_in"/>
       </spirit:adHocConnection>
       <spirit:adHocConnection>
         <spirit:name>w7x_timing_0_state_do</spirit:name>
@@ -901,6 +898,12 @@
       <spirit:adHocConnection>
         <spirit:name>proc_sys7_FCLK_CLK1</spirit:name>
         <spirit:internalPortReference spirit:componentRef="proc_sys7" spirit:portRef="FCLK_CLK1"/>
+        <spirit:internalPortReference spirit:componentRef="timing" spirit:portRef="clk_int_in"/>
+      </spirit:adHocConnection>
+      <spirit:adHocConnection>
+        <spirit:name>trg_in_1</spirit:name>
+        <spirit:externalPortReference spirit:portRef="trg_in"/>
+        <spirit:internalPortReference spirit:componentRef="timing" spirit:portRef="trg_in"/>
       </spirit:adHocConnection>
     </spirit:adHocConnections>
     <spirit:hierConnections>
@@ -1455,7 +1458,14 @@
         <spirit:name>Data</spirit:name>
         <spirit:range>4G</spirit:range>
         <spirit:width>32</spirit:width>
-        <spirit:segments/>
+        <spirit:segments>
+          <spirit:segment>
+            <spirit:name>SEG_timing_reg0</spirit:name>
+            <spirit:displayName>/timing/s00_axi/reg0</spirit:displayName>
+            <spirit:addressOffset>0x43C00000</spirit:addressOffset>
+            <spirit:range>4M</spirit:range>
+          </spirit:segment>
+        </spirit:segments>
       </spirit:addressSpace>
     </spirit:addressSpaces>
   </spirit:component>

@@ -1,3 +1,4 @@
+
 puts " -------------------- "
 puts " W7X_TIMING_SETUP.TCL "
 puts " -------------------- "
@@ -47,5 +48,6 @@ set_property value 250000000 [ipx::get_bus_parameters FREQ_HZ -of_objects [ipx::
 
 
 # Add MDD to SoftwareDriverGroup
-ipx::add_file ./src/w7x_timing.mdd [ipx::get_file_groups xilinx_softwaredriver -of_objects [ipx::current_core]]
-set_property type mdd [ipx::get_files ./src/w7x_timing.mdd -of_objects [ipx::get_file_groups xilinx_softwaredriver -of_objects [ipx::current_core]]]
+set mddfile [file normalize "./src/w7x_timing.mdd"]
+ipx::add_file $mddfile [ipx::get_file_groups xilinx_softwaredriver -of_objects [ipx::current_core]]
+set_property type mdd [ipx::get_files $mddfile -of_objects [ipx::get_file_groups xilinx_softwaredriver -of_objects [ipx::current_core]]]

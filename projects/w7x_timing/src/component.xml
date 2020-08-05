@@ -308,7 +308,7 @@
       <spirit:addressBlock>
         <spirit:name>reg0</spirit:name>
         <spirit:baseAddress spirit:format="bitString" spirit:resolve="user" spirit:bitStringLength="32">0</spirit:baseAddress>
-        <spirit:range spirit:format="long" spirit:resolve="dependent" spirit:dependency="pow(2,(spirit:decode(id(&apos;MODELPARAM_VALUE.ADDR_WIDTH&apos;)) + (spirit:decode(id(&apos;MODELPARAM_VALUE.DATA_WIDTH&apos;)) / 32)) + 1)" spirit:minimum="4096" spirit:rangeType="long">524288</spirit:range>
+        <spirit:range spirit:format="long" spirit:resolve="dependent" spirit:dependency="pow(2,(spirit:decode(id(&apos;MODELPARAM_VALUE.ADDR_WIDTH&apos;)) + (spirit:decode(id(&apos;MODELPARAM_VALUE.DATA_WIDTH&apos;)) / 32)) + 1)" spirit:minimum="4096" spirit:rangeType="long">4194304</spirit:range>
         <spirit:width spirit:format="long" spirit:resolve="dependent" spirit:dependency="(spirit:decode(id(&apos;MODELPARAM_VALUE.DATA_WIDTH&apos;)) - 1) + 1">64</spirit:width>
         <spirit:usage>register</spirit:usage>
       </spirit:addressBlock>

@@ -11,7 +11,8 @@ timing_SOURCES = \
 	src/w7x_timing_v1_0_S00_AXI.vhd \
 	src/w7x_timing_v1_0.vhd \
 	src/w7x_timing.vhd \
-	src/w7x_timing.xdc
+	src/w7x_timing.xdc \
+	src/w7x_timing.mdd
 timing_IPCFG = src/w7x_timing_setup.tcl
 
 ## PROJECTS ##
