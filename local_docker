@@ -1,7 +1,9 @@
+#!/bin/bash
+HOME=$(dirname $(realpath $0))
 docker run\
- -v /git/Anacleto:/git/Anacleto\
+ -v $HOME:$HOME\
  -v /raid1/Xilinx:/opt/Xilinx\
- -it --network=host\
- -e HOME=/git/Anacleto/home\
- -u $(id -u)\
+ --rm --network=host\
+ -itu $(id -u)\
+ -e HOME=$HOME\
  anacleto /bin/bash
