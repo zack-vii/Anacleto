@@ -7,7 +7,7 @@
 #include <time.h>
 #include <math.h>
 
-#include "rptiming_lib.c"
+#include "rptrig_lib.c"
 
 int main(int argc, char *argv[])
 {
@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 		printf("Usage:\n    %s Delay Width Period Burst Cycle Repeat [Seq1..Seq16]\n", argv[0]);
 		exit(C_PARAM_ERROR);
 	}
-	disarm();
+	RPTRIG_Disarm();
 	delay  = (uint64_t)atoi(argv[1]);
 	width  = (uint64_t)atoi(argv[2]);
 	period = (uint64_t)atoi(argv[3]);
@@ -27,17 +27,17 @@ int main(int argc, char *argv[])
 	cycle  = (uint64_t)atoi(argv[5]);
 	repeat = atoi(argv[6]);
 	if(argc == 7)
-		c_status = makeClock(&delay, &width, &period, &burst, &cycle, &repeat);
+		c_status = RPTRIG_MakeClock(&delay, &width, &period, &burst, &cycle, &repeat);
 	else
 	{
 		uint32_t count = argc-7;
 		times = malloc(count*sizeof(uint64_t));
 		for(i = 0; i < count; i++)
 			times[i] = (uint64_t)atoi(argv[i+7]);
-		c_status = makeSequence(&delay, &width, &period, &burst, &cycle, &repeat, &count, times);
+		c_status = RPTRIG_MakeSequence(&delay, &width, &period, &burst, &cycle, &repeat, &count, times);
 		free(times);
 	}
-	arm();
-	rp_timing_release_device();
+	RPTRIG_Arm();
+	RPTRIG_Close();
 	exit(c_status);
 }

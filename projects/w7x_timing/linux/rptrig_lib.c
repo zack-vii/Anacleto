@@ -1,7 +1,9 @@
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
-#include "rptiming.h"
+#include "rptrig.h"
+
+#define PREFIX(name) RPTRIG_##name
 
 #define DEFAULT_DELAY 600000000 //60s
 static struct timespec t = {0, 100};
@@ -28,22 +30,22 @@ static char error[1024];
 #define INIT_DEVICE \
 	*error = 0;\
 	int pos = 0;\
-	if (getDev(&pos))\
+	if (open_dev(&pos))\
 	{\
 		fputs(error, stderr);\
 		return C_DEV_ERROR;\
 	}
 
 static pthread_mutex_t dev_lock = PTHREAD_MUTEX_INITIALIZER;
-static struct rp_timing *dev = NULL;
+static rptrig_t *dev = NULL;
 
-int getDev(int *pos)
+static int open_dev(int *pos)
 {
 	int c_sts = C_OK;
 	pthread_mutex_lock(&dev_lock);
 	if (!dev)
 	{
-		dev = rp_timing_get_device(0);
+		dev = (rptrig_t *)user512_open(NULL);
 		if (!dev)
 		{
 			*pos += sprintf(error+*pos, "ERROR: unable to get device\n");
@@ -54,21 +56,7 @@ int getDev(int *pos)
 	return c_sts;
 }
 
-int get_rp_timing(struct rp_timing **dev_p)
-{
-	*error = 0;
-	int pos = 0;
-	if (getDev(&pos))
-	{
-		fputs(error, stderr);
-		dev_p = NULL;
-		return C_DEV_ERROR;
-	}
-	*dev_p = dev;
-	return C_OK;
-}
-
-uint64_t _getClock()
+static uint64_t get_clock()
 {
 	uint8_t buf[8];
 	int i;
@@ -78,14 +66,34 @@ uint64_t _getClock()
 	return *(uint64_t*)buf;
 }
 
-int getClock(uint64_t * clock)
+
+int PREFIX(GetDevice)(rptrig_t **dev_p)
 {
-	INIT_DEVICE
-	*clock = _getClock();
+	*error = 0;
+	int pos = 0;
+	if (open_dev(&pos))
+	{
+		fputs(error, stderr);
+		dev_p = NULL;
+		return C_DEV_ERROR;
+	}
+	*dev_p = dev;
 	return C_OK;
 }
 
-int getStatus(int idx, int *pos)
+int PREFIX(Close)()
+{
+	return dev ? user512_close((void*)dev) : 0;
+}
+
+int PREFIX(GetClock)(uint64_t * clock)
+{
+	INIT_DEVICE
+	*clock = get_clock();
+	return C_OK;
+}
+
+int PREFIX(GetStatus)(int idx, int *pos)
 {
 	int pos_in = *pos;
 	if (idx >= MAX_STATUS || idx < 0)
@@ -94,7 +102,7 @@ int getStatus(int idx, int *pos)
 		return -1;
 	}
 	uint8_t status, i;
-	if (getDev(pos)) return -1;
+	if (open_dev(pos)) return -1;
 	status = dev->r_status[idx];
 	if (idx<3)
 	{ //it is a status byte
@@ -129,13 +137,13 @@ int getStatus(int idx, int *pos)
 		if (idx>0)
 			*pos += sprintf(error+*pos, "\n");
 		else if (status&1)
-			*pos += sprintf(error+*pos, " - ok @ ticks: %llu\n", _getClock());
+			*pos += sprintf(error+*pos, " - ok @ ticks: %llu\n", get_clock());
 		else
 		{
 			*pos += sprintf(error+*pos, " - errors:\n");
 			for (i = 1 ; i < 3 ; i++)
-			    getStatus(i, pos);
-			*pos += sprintf(error+*pos, " @ ticks: %llu\n", _getClock());
+			    PREFIX(GetStatus)(i, pos);
+			*pos += sprintf(error+*pos, " @ ticks: %llu\n", get_clock());
 		}
 		if (pos_in==0)
 			fputs(error, stdout);
@@ -143,13 +151,13 @@ int getStatus(int idx, int *pos)
 	return status;
 }
 
-int getState()
+int PREFIX(GetState)()
 {
 	INIT_DEVICE
-	return getStatus(0, &pos);
+	return PREFIX(GetStatus)(0, &pos);
 }
 
-int getParams(
+int PREFIX(GetParams)(
 	uint64_t *delay_p,
 	uint64_t *width_p,
 	uint64_t *period_p,
@@ -169,14 +177,14 @@ int getParams(
 	return C_OK;
 }
 
-uint64_t getRegister()
+uint64_t PREFIX(GetRegister)()
 {
 	INIT_DEVICE
 	return *(uint64_t*)&dev->w_init;
 }
 
 
-int getTimes(uint32_t offset, uint32_t count, uint64_t *times_p)
+int PREFIX(GetTimes)(uint32_t offset, uint32_t count, uint64_t *times_p)
 {
 	int i;
 	INIT_DEVICE
@@ -186,7 +194,7 @@ int getTimes(uint32_t offset, uint32_t count, uint64_t *times_p)
 	return C_OK;
 }
 
-int setParams(
+int PREFIX(SetParams)(
 	const uint64_t delay,
 	const uint64_t width,
 	const uint64_t period,
@@ -227,7 +235,7 @@ int setParams(
 		*pos += sprintf(error+*pos, "ERROR: BURST x PERIOD > MAX_TIME = %llu\n", (uint64_t)MAX_TIME);
 		return C_PARAM_ERROR;
 	}
-	if (getDev(pos))
+	if (open_dev(pos))
 		return C_DEV_ERROR;
 	dev->w_count  = 0;
 	dev->w_delay  = delay;
@@ -239,12 +247,12 @@ int setParams(
 	return C_OK;
 }
 
-char* getError()
+char* PREFIX(GetError)()
 {
 	return error;
 }
 
-int makeClock(
+int PREFIX(MakeClock)(
 	const uint64_t *delay_p,
 	const uint64_t *width_p,
 	const uint64_t *period_p,
@@ -265,7 +273,7 @@ int makeClock(
 		}
 	} else
 		cycle = period * burst;
-	int i, c_status = setParams(delay, width, period, burst, cycle, repeat, 1, &pos);
+	int i, c_status = PREFIX(SetParams)(delay, width, period, burst, cycle, repeat, 1, &pos);
 	fputs(error, stdout);
 	if(c_status)
 		return c_status;
@@ -274,7 +282,7 @@ int makeClock(
 	return C_OK;
 }
 
-int makeSequence(
+int PREFIX(MakeSequence)(
 	const uint64_t *delay_p,
 	const uint64_t *width_p,
 	const uint64_t *period_p,
@@ -328,7 +336,7 @@ int makeSequence(
 		}
 	}
 	pos += sprintf(error+pos, "],\n");
-	int c_status = setParams(delay, width, period, burst, cycle, repeat, count, &pos);
+	int c_status = PREFIX(SetParams)(delay, width, period, burst, cycle, repeat, count, &pos);
 	fputs(error, stdout);
 	if(c_status)
 		return c_status;
@@ -337,14 +345,39 @@ int makeSequence(
 	return C_OK;
 }
 
-int trig()
+int PREFIX(Trig)()
 {
 	INIT_DEVICE
 	dev->w_trig = -1;
 	return C_OK;
 }
 
-int reinit(uint64_t *delay_p)
+int PREFIX(Arm)()
+{
+	int i;
+	INIT_DEVICE
+	dev->w_clear = -1;
+	dev->w_init    = INIT_ARM;
+	return C_OK;
+}
+
+int PREFIX(Rearm)()
+{
+	int i;
+	INIT_DEVICE
+	dev->w_clear = -1;
+	dev->w_init = INIT_REARM;
+	return C_OK;
+}
+
+int PREFIX(Disarm)()
+{
+	INIT_DEVICE
+	dev->w_init = 0;
+	return C_OK;
+}
+
+int PREFIX(Reinit)(uint64_t *delay_p)
 {
 	INIT_DEVICE
 	dev->w_init = 0;
@@ -363,55 +396,30 @@ int reinit(uint64_t *delay_p)
 	return C_OK;
 }
 
-int invert(uint8_t val)
+int PREFIX(SetInvert)(uint8_t val)
 {
 	INIT_DEVICE
 	dev->w_invert = val;
 	return C_OK;
 }
 
-int gate(uint8_t val)
+int PREFIX(SetGate)(uint8_t val)
 {
 	INIT_DEVICE
 	dev->w_gate = val;
 	return C_OK;
 }
 
-int gate2(uint8_t val)
+int PREFIX(SetGate2)(uint8_t val)
 {
 	INIT_DEVICE
 	dev->w_gate2 = val;
 	return C_OK;
 }
 
-int extclk(int val)
+int PREFIX(SetExtClock)(int val)
 {
 	INIT_DEVICE
 	dev->w_extclk = val ? -1 : 0;
-	return C_OK;
-}
-
-int arm()
-{
-	int i;
-	INIT_DEVICE
-	dev->w_clear = -1;
-	dev->w_init    = INIT_ARM;
-	return C_OK;
-}
-
-int rearm()
-{
-	int i;
-	INIT_DEVICE
-	dev->w_clear = -1;
-	dev->w_init = INIT_REARM;
-	return C_OK;
-}
-
-int disarm()
-{
-	INIT_DEVICE
-	dev->w_init = 0;
 	return C_OK;
 }

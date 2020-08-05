@@ -2,52 +2,35 @@
 include $(top_srcdir)/Common.mk
 
 AM_MAKEFLAGS = -j$(MAKE_PROCESS)
-AM_CPPFLAGS  = -lpthread
 
+BINS = rptrig
+LIBS = rptrig
 
-MODULES = \
-	  rptiming
+clean::
+	@$(RM) $(OUT)
 
-TEST_EXAMPLES = \
-	  rptiming
+OUT = $(LIBLIBS_SO) $(BINS)
 
-RUN_LIBRARY = \
-	  rptiming
-
-MOSTLYCLEANFILES = $(TEST_EXAMPLES) $(RUN_LIBRARY_SO)
-
-.PHONY: modules
-modules: $(MODULES:=.c) Kbuild
-	@ echo " --- building modules ---"; \
-	$(_set_export); \
-	  $(MAKE) $(AM_MAKEFLAGS) -C ${LINUX_SRCDIR} \
-	  CFLAGS="$(LINUX_CFLAGS)" M=`pwd` O=$$O \
-	  srcdir=$(srcdir) builddir=$(builddir) modules
-
-clean-local:
-	@ echo " --- cleaning modules ---"; \
-	$(_set_export); \
-	$(MAKE) $(AM_MAKEFLAGS) -C ${LINUX_SRCDIR} \
-	     CFLAGS="$(LINUX_CFLAGS)" M=`pwd` O=$$O \
-	     srcdir=$(srcdir) builddir=$(builddir) clean
-
-.PHONY: test_examples
-test_examples: $(TEST_EXAMPLES)
-$(TEST_EXAMPLES):
+.PHONY: bins
+bins: $(BINS)
+$(BINS):
 	echo " --- building $@ ---"; \
 	$(_set_export); \
-	${CROSS_COMPILE}${CC} $(LINUX_CFLAGS) $(srcdir)/$@_test.c -o $@ -lpthread -O2
+	${CROSS_COMPILE}${CC} $(LINUX_CFLAGS) $(srcdir)/$@_bin.c -o $@ -lpthread -O2
 
-.PHONY: run_library
-run_library: $(RUN_LIBRARY_SO)
-RUN_LIBRARY_SO = $(addprefix lib,$(RUN_LIBRARY:=.so))
-$(RUN_LIBRARY_SO): lib%.so: %_lib.c
+
+.PHONY: libs
+libs: $(LIBLIBS_SO)
+LIBLIBS_SO = $(addprefix lib,$(LIBS:=.so))
+
+$(LIBLIBS_SO): lib%.so: %_lib.c
 	echo " --- building $@ ---"; \
 	$(_set_export); \
 	${CROSS_COMPILE}${CC} $(LINUX_CFLAGS) $(srcdir)/$< -fPIC -o $@ -O2 -shared
 
+
 .PHONY: deploy
-deploy: $(MODULES:=.ko) $(TEST_EXAMPLES)
+deploy: $(BINS)
 if WITH_DEVICE_SSHKEY
 	@ echo " --- deploying modules to target device: ${DEVICE_NAME} using key ---";
 	scp -i $(DEVICE_SSHKEY) $^ \
@@ -60,4 +43,4 @@ if WITH_DEVICE_SSHPASSWD
 endif
 endif
 
-all: modules test_examples run_library
+all: libs bins
