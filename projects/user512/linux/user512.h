@@ -43,7 +43,6 @@ user512_t *const user512_open(const char *dev_file)
 		printf("ERROR: failed to open device file\n");
 		return NULL;
 	}
-	fprintf(stderr, "trying to allocate %d bytes of data\n", MAX_SIZE);
 	user512_t *const dev = (user512_t*)mmap(NULL, MAX_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if(!dev)
 		printf("ERROR: failed to mmap device memory\n");
@@ -59,10 +58,7 @@ const int user512_close(user512_t *const dev)
 
 #endif // __KERNEL__
 
-
-
-
 #ifdef __cplusplus
 }
 #endif
-#endif // USER512_H
+#endif
