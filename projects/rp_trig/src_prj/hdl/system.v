@@ -1,8 +1,8 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Thu Aug  6 11:51:01 2020
-//Host        : mds-data-1 running 64-bit Ubuntu 16.04.6 LTS
+//Date        : Thu Aug  6 15:51:02 2020
+//Host        : mds-data-2 running 64-bit Ubuntu 16.04.6 LTS
 //Command     : generate_target system.bd
 //Design      : system
 //Purpose     : IP block netlist
@@ -732,7 +732,7 @@ module system
         .ena(rp_trig_0_BRAM_PORTA_EN),
         .wea(rp_trig_0_BRAM_PORTA_WE),
         .web(1'b0));
-  system_clk_10MHz_0 clk_10MHz
+  system_clk_wiz_0_0 clk_wiz_0
        (.clk_in1(proc_sys7_FCLK_CLK0),
         .clk_out1(clk_wiz_0_clk_out1),
         .power_down(trig_power_down),

@@ -7,7 +7,8 @@ entity rp_trig is
         BRAM_SIZE  : integer := 54272;
         BRAM_WIDTH : integer := 40;
         DATA_WIDTH : integer := 64;
-        ADDR_WIDTH : integer := 16
+        ADDR_WIDTH : integer := 16;
+        INT_CLK_EXP : integer := 4  -- clk_int_in = (1<<INT_CLK_EXP) * 10MHz
     );
     port (
         clk_axi_in : in  STD_LOGIC;
@@ -177,24 +178,30 @@ architecture arch_imp of rp_trig is
     alias  gate2     : std_logic is s_addr(0);
     -- gate2 is high before odd indices 0, 1, 2, 3
     --                                 _|""|__|""|__
-
-    signal trg       : std_logic := '0';
     signal clk       : std_logic := '0';
+    signal trg       : std_logic := '0';
+    -- divide clk_int_in down to 10MHz
+    signal clkbuf    : std_logic_vector(INT_CLK_EXP downto 0);
 
 begin
 
-buffer_inputs: process(clk_axi_in,
-		clk_ext_in, c_extclk, clk_int_in,
-		c_trig,trg_in)
+clkbuf(INT_CLK_EXP) <= clk_int_in;
+clock_divider : for i in INT_CLK_EXP downto 1 generate
+    process(clkbuf) begin
+        if rising_edge(clkbuf(i))
+        then clkbuf(i-1) <= not clkbuf(i-1);
+        end if;
+    end process;
+end generate clock_divider;
+clk <= clk_ext_in when c_extclk = '1' else clkbuf(0);
+
+process(clk,c_trig,trg_in)
 begin
-  if rising_edge(clk_axi_in) then
-    if c_extclk = '1'
-    then clk <= clk_ext_in;
-    else clk <= clk_int_in;
+    if rising_edge(clk)
+    then trg <= c_trig or trg_in;
     end if;
-    trg <= c_trig or trg_in;
-  end if;
-end process buffer_inputs;
+end process;
+
 
 power_down <= c_extclk;
 ---- BRAM
