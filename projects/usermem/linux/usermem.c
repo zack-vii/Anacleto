@@ -12,7 +12,6 @@
 #include "usermem.h"
 
 static struct platform_device *s_pdev = 0;
-static int s_device_open = 0;
 
 // FOPS FWDDECL //
 static int device_open(struct inode *, struct file *);
@@ -44,9 +43,6 @@ static struct file_operations fops = {
 // OPEN //
 static int device_open(struct inode *inode, struct file *file)
 {
-
-	if (s_device_open) return -EBUSY;
-	s_device_open++;
 	return capable(CAP_SYS_RAWIO) ? 0 : -EPERM;
 }
 
@@ -54,7 +50,6 @@ static int device_open(struct inode *inode, struct file *file)
 // CLOSE //
 static int device_release(struct inode *inode, struct file *file)
 {
-	s_device_open --;
 	return C_OK;
 }
 
@@ -262,9 +257,9 @@ static const struct of_device_id usermem_of_match_table[] = {
 
 static struct platform_driver usermem_driver = {
 	.driver = {
-			.name  = MODULE_NAME,
+		.name = MODULE_NAME,
 		.owner = THIS_MODULE,
-			.of_match_table = usermem_of_match_table,
+		.of_match_table = usermem_of_match_table,
 	},
 	.probe = usermem_probe,
 	.remove = usermem_remove,

@@ -12,9 +12,9 @@ int main(int argc, char *argv[])
 	int i;
 	for (i = 0 ; i <= 255 ; i++)
 	{
-		dev->raw[8] = i;
+		dev->buf[8] = i;
 		usleep(10000);
 	}
-	dev->raw[8] = 0;
+	dev->buf[8] = 0;
 	exit(usermem_close(dev));
 }

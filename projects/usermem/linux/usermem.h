@@ -17,9 +17,10 @@ extern "C" {
 
 #define DEVICE_NAME	"usermem"  /* Dev name as it appears in /proc/devices */
 #define MODULE_NAME	"usermem"
-#define MAX_SIZE	0x400000
+#define USERMEM_SIZE	0x400000
+#define USERMEM(name)	char name[USERMEM_SIZE]
 typedef struct {
-	char raw[MAX_SIZE];
+	USERMEM(buf);
 } usermem_t;
 
 #ifndef __KERNEL__
@@ -43,7 +44,7 @@ usermem_t *const usermem_open(const char *dev_file)
 		printf("ERROR: failed to open device file\n");
 		return NULL;
 	}
-	usermem_t *const dev = (usermem_t*)mmap(NULL, MAX_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	usermem_t *const dev = (usermem_t*)mmap(NULL, USERMEM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if(!dev)
 		printf("ERROR: failed to mmap device memory\n");
 	return dev;
@@ -52,7 +53,7 @@ usermem_t *const usermem_open(const char *dev_file)
 const int usermem_close(usermem_t *const dev)
 {
 	if(dev)
-		return munmap(dev, MAX_SIZE);
+		return munmap(dev, USERMEM_SIZE);
 	return C_OK;
 }
 
