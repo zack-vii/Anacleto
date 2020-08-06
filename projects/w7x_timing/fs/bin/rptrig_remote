@@ -202,7 +202,7 @@ DELAY: 1000000, WIDTH: 1000, PERIOD: 2000, BURST: 10, CYCLE: 3000000, REPEAT: 3,
 def test(host=None):
     import os
     if host is None:
-        Test._host = os.getenv('RedPitaya','RP-F0432C')
+        Test._host = os.getenv('RP','127.0.0.1')
     else:
         Test._host = host
     suite=_u.TestSuite(Test.getTests())

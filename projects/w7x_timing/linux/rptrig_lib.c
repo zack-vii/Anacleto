@@ -76,9 +76,7 @@ int get_status(int idx, int *pos)
 	}
 	uint8_t status, i;
 	if (open_dev(pos)) return -1;
-	fprintf(stderr, "|%d,dev:%x", idx, (uint32_t)dev);
 	status = dev->r_status[idx];
-	fprintf(stderr, "|%d", status);
 	if (idx<3)
 	{ //it is a status byte
 		switch (status & STATUS_MASK)

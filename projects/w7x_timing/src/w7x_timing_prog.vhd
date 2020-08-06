@@ -11,7 +11,7 @@ entity w7x_timing_prog is
     );
     port (
        clk_in     : in  STD_LOGIC;
-       trigger_in : in  STD_LOGIC;
+       trg_in     : in  STD_LOGIC;
        on_in      : in  STD_LOGIC;
        armed_in   : in  STD_LOGIC;
        clear_in   : in  STD_LOGIC;
@@ -80,7 +80,7 @@ begin
       sample_total <= unsigned(head_in(5*DATA_WIDTH+ADDR_WIDTH+31 downto 5*DATA_WIDTH+32));
     end if;
   end process buffer_input;
-  clock_gen:  process(clk_in, on_in, armed_in, trigger_in, clear_in, 
+  clock_gen:  process(clk_in, on_in, armed_in, trg_in, clear_in,
                       delay_total, high_total, period_total,
                       cycle_total, repeat_total,
                       sample_total, sample) is
@@ -277,7 +277,7 @@ begin
       else
         case state is
           when ARMED => 
-            if trigger_in = '1' then
+            if trg_in = '1' then
               start_program;
             end if;
           when WAITING_DELAY =>

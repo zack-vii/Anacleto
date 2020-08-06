@@ -173,7 +173,7 @@
           </spirit:wire>
         </spirit:port>
         <spirit:port>
-          <spirit:name>state_leds</spirit:name>
+          <spirit:name>state0</spirit:name>
           <spirit:wire>
             <spirit:direction>out</spirit:direction>
             <spirit:vector>
@@ -183,7 +183,7 @@
           </spirit:wire>
         </spirit:port>
         <spirit:port>
-          <spirit:name>state0</spirit:name>
+          <spirit:name>state_leds</spirit:name>
           <spirit:wire>
             <spirit:direction>out</spirit:direction>
             <spirit:vector>
@@ -208,17 +208,6 @@
     <spirit:name>system_imp</spirit:name>
     <spirit:version>1.00.a</spirit:version>
     <spirit:componentInstances>
-      <spirit:componentInstance>
-        <spirit:instanceName>axi_intercon</spirit:instanceName>
-        <spirit:componentRef spirit:library="BlockDiagram/system_imp" spirit:name="axi_intercon" spirit:vendor="xilinx.com" spirit:version="1.00.a"/>
-        <spirit:configurableElementValues>
-          <spirit:configurableElementValue spirit:referenceId="bd:xciName">system_axi_intercon_0</spirit:configurableElementValue>
-          <spirit:configurableElementValue spirit:referenceId="NUM_MI">1</spirit:configurableElementValue>
-          <spirit:configurableElementValue spirit:referenceId="S00_HAS_REGSLICE">3</spirit:configurableElementValue>
-          <spirit:configurableElementValue spirit:referenceId="S00_HAS_DATA_FIFO">1</spirit:configurableElementValue>
-          <spirit:configurableElementValue spirit:referenceId="appcore">xilinx.com:ip:axi_interconnect:2.1</spirit:configurableElementValue>
-        </spirit:configurableElementValues>
-      </spirit:componentInstance>
       <spirit:componentInstance>
         <spirit:instanceName>bram</spirit:instanceName>
         <spirit:componentRef spirit:library="ip" spirit:name="blk_mem_gen" spirit:vendor="xilinx.com" spirit:version="8.3"/>
@@ -269,7 +258,6 @@
           <spirit:configurableElementValue spirit:referenceId="PCW_SDIO0_BASEADDR">0xE0100000</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_SDIO0_HIGHADDR">0xE0100FFF</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_FCLK_CLK0_BUF">TRUE</spirit:configurableElementValue>
-          <spirit:configurableElementValue spirit:referenceId="PCW_FCLK_CLK1_BUF">TRUE</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_UIPARAM_DDR_FREQ_MHZ">533.333333</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_UIPARAM_DDR_AL">0</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_UIPARAM_DDR_DQS_TO_CLK_DELAY_0">0.0</spirit:configurableElementValue>
@@ -473,7 +461,7 @@
           <spirit:configurableElementValue spirit:referenceId="PCW_DM_WIDTH">4</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_MIO_PRIMITIVE">54</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_EN_CLK0_PORT">1</spirit:configurableElementValue>
-          <spirit:configurableElementValue spirit:referenceId="PCW_EN_CLK1_PORT">1</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="PCW_EN_CLK1_PORT">0</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_EN_CLK2_PORT">0</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_EN_CLK3_PORT">0</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_EN_RST0_PORT">1</spirit:configurableElementValue>
@@ -756,7 +744,6 @@
           <spirit:configurableElementValue spirit:referenceId="PCW_MIO_TREE_SIGNALS">gpio[0]#qspi0_ss_b#qspi0_io[0]#qspi0_io[1]#qspi0_io[2]#qspi0_io[3]#qspi0_sclk#gpio[7]#tx#rx#mosi#miso#sclk#ss[0]#rx#tx#tx_clk#txd[0]#txd[1]#txd[2]#txd[3]#tx_ctl#rx_clk#rxd[0]#rxd[1]#rxd[2]#rxd[3]#rx_ctl#data[4]#dir#stp#nxt#data[0]#data[1]#data[2]#data[3]#clk#data[5]#data[6]#data[7]#clk#cmd#data[0]#data[1]#data[2]#data[3]#cd#wp#gpio[48]#gpio[49]#scl#sda#mdc#mdio</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_PS7_SI_REV">PRODUCTION</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_FPGA_FCLK0_ENABLE">1</spirit:configurableElementValue>
-          <spirit:configurableElementValue spirit:referenceId="PCW_FPGA_FCLK1_ENABLE">1</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_NOR_SRAM_CS0_T_TR">1</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_NOR_SRAM_CS0_T_PC">1</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_NOR_SRAM_CS0_T_WP">1</spirit:configurableElementValue>
@@ -818,18 +805,53 @@
           <spirit:configurableElementValue spirit:referenceId="ADDR_WIDTH">16</spirit:configurableElementValue>
         </spirit:configurableElementValues>
       </spirit:componentInstance>
+      <spirit:componentInstance>
+        <spirit:instanceName>axi_intercon</spirit:instanceName>
+        <spirit:componentRef spirit:library="BlockDiagram/system_imp" spirit:name="axi_intercon" spirit:vendor="xilinx.com" spirit:version="1.00.a"/>
+        <spirit:configurableElementValues>
+          <spirit:configurableElementValue spirit:referenceId="bd:xciName">system_axi_intercon_0</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="NUM_MI">1</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="S00_HAS_REGSLICE">3</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="S00_HAS_DATA_FIFO">1</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="appcore">xilinx.com:ip:axi_interconnect:2.1</spirit:configurableElementValue>
+        </spirit:configurableElementValues>
+      </spirit:componentInstance>
+      <spirit:componentInstance>
+        <spirit:instanceName>clk_10MHz</spirit:instanceName>
+        <spirit:componentRef spirit:library="ip" spirit:name="clk_wiz" spirit:vendor="xilinx.com" spirit:version="5.4"/>
+        <spirit:configurableElementValues>
+          <spirit:configurableElementValue spirit:referenceId="bd:xciName">system_clk_10MHz_0</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="PRIMITIVE">MMCM</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="USE_MIN_POWER">true</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="JITTER_SEL">No_Jitter</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKIN1_JITTER_PS">100.0</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKOUT1_REQUESTED_OUT_FREQ">10.000</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKOUT1_DRIVES">BUFGCE</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKOUT2_DRIVES">BUFGCE</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKOUT3_DRIVES">BUFGCE</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKOUT4_DRIVES">BUFGCE</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKOUT5_DRIVES">BUFGCE</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKOUT6_DRIVES">BUFGCE</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKOUT7_DRIVES">BUFGCE</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="FEEDBACK_SOURCE">FDBK_AUTO</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="USE_LOCKED">false</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="USE_POWER_DOWN">true</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="RESET_PORT">resetn</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="MMCM_DIVCLK_DIVIDE">10</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="MMCM_CLKFBOUT_MULT_F">60.125</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="MMCM_CLKIN1_PERIOD">10.000</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="MMCM_CLKIN2_PERIOD">10.000</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="MMCM_COMPENSATION">ZHOLD</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="MMCM_CLKOUT0_DIVIDE_F">60.125</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="MMCM_CLKOUT0_DUTY_CYCLE">0.5</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="RESET_TYPE">ACTIVE_LOW</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="USE_SAFE_CLOCK_STARTUP">true</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKOUT1_JITTER">884.502</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="CLKOUT1_PHASE_ERROR">871.302</spirit:configurableElementValue>
+        </spirit:configurableElementValues>
+      </spirit:componentInstance>
     </spirit:componentInstances>
     <spirit:interconnections>
-      <spirit:interconnection>
-        <spirit:name>processing_system7_0_axi_periph_M00_AXI</spirit:name>
-        <spirit:activeInterface spirit:busRef="M00_AXI" spirit:componentRef="axi_intercon"/>
-        <spirit:activeInterface spirit:busRef="s00_axi" spirit:componentRef="timing"/>
-      </spirit:interconnection>
-      <spirit:interconnection>
-        <spirit:name>processing_system7_0_M_AXI_GP0</spirit:name>
-        <spirit:activeInterface spirit:busRef="M_AXI_GP0" spirit:componentRef="proc_sys7"/>
-        <spirit:activeInterface spirit:busRef="S00_AXI" spirit:componentRef="axi_intercon"/>
-      </spirit:interconnection>
       <spirit:interconnection>
         <spirit:name>w7x_timing_0_BRAM_PORTA</spirit:name>
         <spirit:activeInterface spirit:busRef="BRAM_PORTA" spirit:componentRef="bram"/>
@@ -840,6 +862,16 @@
         <spirit:activeInterface spirit:busRef="BRAM_PORTB" spirit:componentRef="bram"/>
         <spirit:activeInterface spirit:busRef="BRAM_PORTB" spirit:componentRef="timing"/>
       </spirit:interconnection>
+      <spirit:interconnection>
+        <spirit:name>processing_system7_0_M_AXI_GP0</spirit:name>
+        <spirit:activeInterface spirit:busRef="M_AXI_GP0" spirit:componentRef="proc_sys7"/>
+        <spirit:activeInterface spirit:busRef="S00_AXI" spirit:componentRef="axi_intercon"/>
+      </spirit:interconnection>
+      <spirit:interconnection>
+        <spirit:name>processing_system7_0_axi_periph_M00_AXI</spirit:name>
+        <spirit:activeInterface spirit:busRef="M00_AXI" spirit:componentRef="axi_intercon"/>
+        <spirit:activeInterface spirit:busRef="s00_axi" spirit:componentRef="timing"/>
+      </spirit:interconnection>
     </spirit:interconnections>
     <spirit:adHocConnections>
       <spirit:adHocConnection>
@@ -848,21 +880,18 @@
         <spirit:internalPortReference spirit:componentRef="proc_sys7" spirit:portRef="M_AXI_GP0_ACLK"/>
         <spirit:internalPortReference spirit:componentRef="proc_sys_reset" spirit:portRef="slowest_sync_clk"/>
         <spirit:internalPortReference spirit:componentRef="timing" spirit:portRef="clk_axi_in"/>
+        <spirit:internalPortReference spirit:componentRef="clk_10MHz" spirit:portRef="clk_in1"/>
         <spirit:internalPortReference spirit:componentRef="axi_intercon" spirit:portRef="ACLK"/>
-        <spirit:internalPortReference spirit:componentRef="axi_intercon" spirit:portRef="M00_ACLK"/>
         <spirit:internalPortReference spirit:componentRef="axi_intercon" spirit:portRef="S00_ACLK"/>
+        <spirit:internalPortReference spirit:componentRef="axi_intercon" spirit:portRef="M00_ACLK"/>
       </spirit:adHocConnection>
       <spirit:adHocConnection>
-        <spirit:name>rst_processing_system7_0_125M_interconnect_aresetn</spirit:name>
-        <spirit:internalPortReference spirit:componentRef="proc_sys_reset" spirit:portRef="interconnect_aresetn"/>
-        <spirit:internalPortReference spirit:componentRef="axi_intercon" spirit:portRef="ARESETN"/>
-      </spirit:adHocConnection>
-      <spirit:adHocConnection>
-        <spirit:name>rst_processing_system7_0_125M_peripheral_aresetn</spirit:name>
+        <spirit:name>proc_sys_reset_peripheral_aresetn</spirit:name>
         <spirit:internalPortReference spirit:componentRef="proc_sys_reset" spirit:portRef="peripheral_aresetn"/>
         <spirit:internalPortReference spirit:componentRef="timing" spirit:portRef="s00_axi_resetn"/>
-        <spirit:internalPortReference spirit:componentRef="axi_intercon" spirit:portRef="M00_ARESETN"/>
+        <spirit:internalPortReference spirit:componentRef="clk_10MHz" spirit:portRef="resetn"/>
         <spirit:internalPortReference spirit:componentRef="axi_intercon" spirit:portRef="S00_ARESETN"/>
+        <spirit:internalPortReference spirit:componentRef="axi_intercon" spirit:portRef="M00_ARESETN"/>
       </spirit:adHocConnection>
       <spirit:adHocConnection>
         <spirit:name>processing_system7_0_FCLK_RESET0_N</spirit:name>
@@ -882,18 +911,28 @@
       <spirit:adHocConnection>
         <spirit:name>w7x_timing_0_state_led</spirit:name>
         <spirit:internalPortReference spirit:componentRef="timing" spirit:portRef="state_led"/>
-        <spirit:externalPortReference spirit:portRef="state0"/>
         <spirit:externalPortReference spirit:portRef="state_leds"/>
-      </spirit:adHocConnection>
-      <spirit:adHocConnection>
-        <spirit:name>proc_sys7_FCLK_CLK1</spirit:name>
-        <spirit:internalPortReference spirit:componentRef="proc_sys7" spirit:portRef="FCLK_CLK1"/>
-        <spirit:internalPortReference spirit:componentRef="timing" spirit:portRef="clk_int_in"/>
+        <spirit:externalPortReference spirit:portRef="state0"/>
       </spirit:adHocConnection>
       <spirit:adHocConnection>
         <spirit:name>trg_in_1</spirit:name>
         <spirit:externalPortReference spirit:portRef="trg_in"/>
         <spirit:internalPortReference spirit:componentRef="timing" spirit:portRef="trg_in"/>
+      </spirit:adHocConnection>
+      <spirit:adHocConnection>
+        <spirit:name>proc_sys_reset_interconnect_aresetn</spirit:name>
+        <spirit:internalPortReference spirit:componentRef="proc_sys_reset" spirit:portRef="interconnect_aresetn"/>
+        <spirit:internalPortReference spirit:componentRef="axi_intercon" spirit:portRef="ARESETN"/>
+      </spirit:adHocConnection>
+      <spirit:adHocConnection>
+        <spirit:name>timing_power_down</spirit:name>
+        <spirit:internalPortReference spirit:componentRef="timing" spirit:portRef="power_down"/>
+        <spirit:internalPortReference spirit:componentRef="clk_10MHz" spirit:portRef="power_down"/>
+      </spirit:adHocConnection>
+      <spirit:adHocConnection>
+        <spirit:name>clk_wiz_0_clk_out1</spirit:name>
+        <spirit:internalPortReference spirit:componentRef="clk_10MHz" spirit:portRef="clk_out1"/>
+        <spirit:internalPortReference spirit:componentRef="timing" spirit:portRef="clk_int_in"/>
       </spirit:adHocConnection>
     </spirit:adHocConnections>
     <spirit:hierConnections>

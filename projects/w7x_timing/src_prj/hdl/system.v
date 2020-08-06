@@ -1,7 +1,7 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Thu Aug  6 05:11:23 2020
+//Date        : Thu Aug  6 10:56:50 2020
 //Host        : mds-data-1 running 64-bit unknown
 //Command     : generate_target system.bd
 //Design      : system
@@ -498,7 +498,7 @@ module s00_couplers_imp_1XH0AG
         .s_axi_wvalid(auto_us_to_s00_data_fifo_WVALID));
 endmodule
 
-(* CORE_GENERATION_INFO = "system,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLibrary=BlockDiagram,x_ipName=system,x_ipVersion=1.00.a,x_ipLanguage=VERILOG,numBlks=10,numReposBlks=8,numNonXlnxBlks=1,numHierBlks=2,maxHierDepth=0,numSysgenBlks=0,numHlsBlks=0,numHdlrefBlks=0,numPkgbdBlks=0,bdsource=USER,synth_mode=Global}" *) (* HW_HANDOFF = "system.hwdef" *) 
+(* CORE_GENERATION_INFO = "system,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLibrary=BlockDiagram,x_ipName=system,x_ipVersion=1.00.a,x_ipLanguage=VERILOG,numBlks=11,numReposBlks=9,numNonXlnxBlks=1,numHierBlks=2,maxHierDepth=0,numSysgenBlks=0,numHlsBlks=0,numHdlrefBlks=0,numPkgbdBlks=0,bdsource=USER,synth_mode=Global}" *) (* HW_HANDOFF = "system.hwdef" *) 
 module system
    (DDR_addr,
     DDR_ba,
@@ -554,7 +554,9 @@ module system
   input trg_in;
 
   wire clk_1;
-  wire proc_sys7_FCLK_CLK1;
+  wire clk_wiz_0_clk_out1;
+  wire [0:0]proc_sys_reset_interconnect_aresetn;
+  wire [0:0]proc_sys_reset_peripheral_aresetn;
   wire [14:0]processing_system7_0_DDR_ADDR;
   wire [2:0]processing_system7_0_DDR_BA;
   wire processing_system7_0_DDR_CAS_N;
@@ -635,8 +637,7 @@ module system
   wire processing_system7_0_axi_periph_M00_AXI_WREADY;
   wire [7:0]processing_system7_0_axi_periph_M00_AXI_WSTRB;
   wire processing_system7_0_axi_periph_M00_AXI_WVALID;
-  wire [0:0]rst_processing_system7_0_125M_interconnect_aresetn;
-  wire [0:0]rst_processing_system7_0_125M_peripheral_aresetn;
+  wire timing_power_down;
   wire trg_in_1;
   wire [15:0]w7x_timing_0_BRAM_PORTA_ADDR;
   wire w7x_timing_0_BRAM_PORTA_CLK;
@@ -657,9 +658,9 @@ module system
   assign trg_in_1 = trg_in;
   system_axi_intercon_0 axi_intercon
        (.ACLK(processing_system7_0_FCLK_CLK0),
-        .ARESETN(rst_processing_system7_0_125M_interconnect_aresetn),
+        .ARESETN(proc_sys_reset_interconnect_aresetn),
         .M00_ACLK(processing_system7_0_FCLK_CLK0),
-        .M00_ARESETN(rst_processing_system7_0_125M_peripheral_aresetn),
+        .M00_ARESETN(proc_sys_reset_peripheral_aresetn),
         .M00_AXI_araddr(processing_system7_0_axi_periph_M00_AXI_ARADDR),
         .M00_AXI_arprot(processing_system7_0_axi_periph_M00_AXI_ARPROT),
         .M00_AXI_arready(processing_system7_0_axi_periph_M00_AXI_ARREADY),
@@ -680,7 +681,7 @@ module system
         .M00_AXI_wstrb(processing_system7_0_axi_periph_M00_AXI_WSTRB),
         .M00_AXI_wvalid(processing_system7_0_axi_periph_M00_AXI_WVALID),
         .S00_ACLK(processing_system7_0_FCLK_CLK0),
-        .S00_ARESETN(rst_processing_system7_0_125M_peripheral_aresetn),
+        .S00_ARESETN(proc_sys_reset_peripheral_aresetn),
         .S00_AXI_araddr(processing_system7_0_M_AXI_GP0_ARADDR),
         .S00_AXI_arburst(processing_system7_0_M_AXI_GP0_ARBURST),
         .S00_AXI_arcache(processing_system7_0_M_AXI_GP0_ARCACHE),
@@ -731,6 +732,11 @@ module system
         .ena(w7x_timing_0_BRAM_PORTA_EN),
         .wea(w7x_timing_0_BRAM_PORTA_WE),
         .web(1'b0));
+  system_clk_10MHz_0 clk_10MHz
+       (.clk_in1(processing_system7_0_FCLK_CLK0),
+        .clk_out1(clk_wiz_0_clk_out1),
+        .power_down(timing_power_down),
+        .resetn(proc_sys_reset_peripheral_aresetn));
   system_proc_sys7_0 proc_sys7
        (.CAN0_PHY_RX(1'b0),
         .DDR_Addr(DDR_addr[14:0]),
@@ -751,7 +757,6 @@ module system
         .DDR_VRP(FIXED_IO_ddr_vrp),
         .DDR_WEB(DDR_we_n),
         .FCLK_CLK0(processing_system7_0_FCLK_CLK0),
-        .FCLK_CLK1(proc_sys7_FCLK_CLK1),
         .FCLK_RESET0_N(processing_system7_0_FCLK_RESET0_N),
         .GPIO_I({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .MIO(FIXED_IO_mio[53:0]),
@@ -806,9 +811,9 @@ module system
        (.aux_reset_in(1'b1),
         .dcm_locked(1'b1),
         .ext_reset_in(processing_system7_0_FCLK_RESET0_N),
-        .interconnect_aresetn(rst_processing_system7_0_125M_interconnect_aresetn),
+        .interconnect_aresetn(proc_sys_reset_interconnect_aresetn),
         .mb_debug_sys_rst(1'b0),
-        .peripheral_aresetn(rst_processing_system7_0_125M_peripheral_aresetn),
+        .peripheral_aresetn(proc_sys_reset_peripheral_aresetn),
         .slowest_sync_clk(processing_system7_0_FCLK_CLK0));
   system_timing_0 timing
        (.bram_addra(w7x_timing_0_BRAM_PORTA_ADDR),
@@ -822,7 +827,8 @@ module system
         .bram_wea(w7x_timing_0_BRAM_PORTA_WE),
         .clk_axi_in(processing_system7_0_FCLK_CLK0),
         .clk_ext_in(clk_1),
-        .clk_int_in(proc_sys7_FCLK_CLK1),
+        .clk_int_in(clk_wiz_0_clk_out1),
+        .power_down(timing_power_down),
         .s00_axi_araddr(processing_system7_0_axi_periph_M00_AXI_ARADDR[18:0]),
         .s00_axi_arprot(processing_system7_0_axi_periph_M00_AXI_ARPROT),
         .s00_axi_arready(processing_system7_0_axi_periph_M00_AXI_ARREADY),
@@ -835,7 +841,7 @@ module system
         .s00_axi_bresp(processing_system7_0_axi_periph_M00_AXI_BRESP),
         .s00_axi_bvalid(processing_system7_0_axi_periph_M00_AXI_BVALID),
         .s00_axi_rdata(processing_system7_0_axi_periph_M00_AXI_RDATA),
-        .s00_axi_resetn(rst_processing_system7_0_125M_peripheral_aresetn),
+        .s00_axi_resetn(proc_sys_reset_peripheral_aresetn),
         .s00_axi_rready(processing_system7_0_axi_periph_M00_AXI_RREADY),
         .s00_axi_rresp(processing_system7_0_axi_periph_M00_AXI_RRESP),
         .s00_axi_rvalid(processing_system7_0_axi_periph_M00_AXI_RVALID),

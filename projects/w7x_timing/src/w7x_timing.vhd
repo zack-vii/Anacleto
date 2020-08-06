@@ -103,7 +103,7 @@ architecture arch_imp of w7x_timing is
     );
     port (
     clk_in     : in  STD_LOGIC;
-    trigger_in : in  STD_LOGIC;
+    trg_in     : in  STD_LOGIC;
     on_in      : in  STD_LOGIC;
     armed_in   : in  STD_LOGIC;
     clear_in   : in  STD_LOGIC;
@@ -169,7 +169,6 @@ architecture arch_imp of w7x_timing is
     alias c_save     : std_logic is cc_save(0);
     alias c_extclk   : std_logic is cc_extclk(0);
 
-    signal trigger   : std_logic;
     alias  sig       : std_logic is state(7);
     alias  gate      : std_logic is state(6);
     alias  running   : std_logic is state(4);
@@ -179,12 +178,24 @@ architecture arch_imp of w7x_timing is
     -- gate2 is high before odd indices 0, 1, 2, 3
     --                                 _|""|__|""|__
 
+    signal trg       : std_logic := '0';
     signal clk       : std_logic := '0';
 
 begin
-clk <= clk_ext_in when c_extclk = '1' else clk_int_in;
 
-trigger    <= c_trig or trg_in;
+buffer_inputs: process(clk_axi_in,
+		clk_ext_in, c_extclk, clk_int_in,
+		c_trig,trg_in)
+begin
+  if rising_edge(clk_axi_in) then
+    if c_extclk = '1'
+    then clk <= clk_ext_in;
+    else clk <= clk_int_in;
+    end if;
+    trg <= c_trig or trg_in;
+  end if;
+end process buffer_inputs;
+
 power_down <= c_extclk;
 ---- BRAM
 bram_clka   <= clk_axi_in;
@@ -221,7 +232,7 @@ output: for i in 2 to 7 generate
 
 end generate output;
 ---- translate LED states
-state_led(0) <= not trigger;
+state_led(0) <= not trg;
 state_led(1) <= clk;
 state_led(2) <= sig;--sig
 state_led(3) <= gate2 when cc_gate2(2) = '1' else gate;--gate
@@ -245,7 +256,7 @@ begin
     -- handle fpga write operations
     state_buf <= state;
     if armed = '0' then
-      if (trigger = '1' and c_rearm ='0') then
+      if (trg = '1' and c_rearm ='0') then
         c_arm <= '0';
       end if;
       cc_trig <= (others => '0');
@@ -311,14 +322,14 @@ prog : w7x_timing_prog
         HEAD_COUNT => HEAD_COUNT
     )
     port map (
-       clk_in      => clk,
-       trigger_in  => trigger,
-       on_in       => c_on,
-       armed_in    => c_arm,
-       clear_in    => c_clear,
-       index_out   => s_addr,
-       state_out   => state,
-       head_in     => head_buf,
-       sample_in   => bram_doutb
+       clk_in    => clk,
+       trg_in    => trg,
+       on_in     => c_on,
+       armed_in  => c_arm,
+       clear_in  => c_clear,
+       index_out => s_addr,
+       state_out => state,
+       head_in   => head_buf,
+       sample_in => bram_doutb
     );
 end arch_imp;

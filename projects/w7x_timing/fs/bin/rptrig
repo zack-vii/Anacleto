@@ -340,14 +340,11 @@ class Test(_u.TestCase):
         dev = rptrig()
         dev.disarm();
         dev.reinit(),
-        self.assertEqual(dev.error.strip(),"MAKE CLOCK: DELAY: 600000000, WIDTH: 5, PERIOD: 10, BURST: 0, CYCLE: 0, REPEAT: 0, COUNT: 1")
         sleep(.1)
         dev.disarm();
         dev.makeClock(cycle=10000000,burst=1000,repeat=5)
-        self.assertEqual(dev.error.strip(),"MAKE CLOCK: DELAY: 0, WIDTH: 5, PERIOD: 10, BURST: 1000, CYCLE: 10000000, REPEAT: 5, COUNT: 1")
         self.assertEqual(dev.params,(0,5,10,1000,10000000,5,1))
         dev.makeSequence(1e6,5,10,100,1e6,3,[0,2e4,4e4,5e4,7e4,1e5])
-        self.assertEqual(dev.error.strip(),"MAKE SEQUENCE: TIMES: [0, 20000, 40000, 50000, 70000, 100000],\nDELAY: 1000000, WIDTH: 5, PERIOD: 10, BURST: 100, CYCLE: 1000000, REPEAT: 3, COUNT: 6")
         dev.gate([2,4])
         dev.gate2([5])
         dev.invert([3,4])
