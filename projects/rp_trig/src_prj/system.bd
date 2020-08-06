@@ -173,7 +173,7 @@
           </spirit:wire>
         </spirit:port>
         <spirit:port>
-          <spirit:name>state0</spirit:name>
+          <spirit:name>state_leds</spirit:name>
           <spirit:wire>
             <spirit:direction>out</spirit:direction>
             <spirit:vector>
@@ -183,7 +183,7 @@
           </spirit:wire>
         </spirit:port>
         <spirit:port>
-          <spirit:name>state_leds</spirit:name>
+          <spirit:name>state0</spirit:name>
           <spirit:wire>
             <spirit:direction>out</spirit:direction>
             <spirit:vector>
@@ -325,9 +325,9 @@
           <spirit:configurableElementValue spirit:referenceId="PCW_ACT_APU_PERIPHERAL_FREQMHZ">666.666687</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_UIPARAM_ACT_DDR_FREQ_MHZ">533.333374</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_ACT_DCI_PERIPHERAL_FREQMHZ">10.158730</spirit:configurableElementValue>
-          <spirit:configurableElementValue spirit:referenceId="PCW_ACT_QSPI_PERIPHERAL_FREQMHZ">100.000000</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="PCW_ACT_QSPI_PERIPHERAL_FREQMHZ">125.000000</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_ACT_SMC_PERIPHERAL_FREQMHZ">10.000000</spirit:configurableElementValue>
-          <spirit:configurableElementValue spirit:referenceId="PCW_ACT_ENET0_PERIPHERAL_FREQMHZ">100.000000</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="PCW_ACT_ENET0_PERIPHERAL_FREQMHZ">125.000000</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_ACT_ENET1_PERIPHERAL_FREQMHZ">10.000000</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_ACT_USB0_PERIPHERAL_FREQMHZ">60</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="PCW_ACT_USB1_PERIPHERAL_FREQMHZ">60</spirit:configurableElementValue>
@@ -911,8 +911,8 @@
       <spirit:adHocConnection>
         <spirit:name>rp_trig_0_state_led</spirit:name>
         <spirit:internalPortReference spirit:componentRef="trig" spirit:portRef="state_led"/>
-        <spirit:externalPortReference spirit:portRef="state_leds"/>
         <spirit:externalPortReference spirit:portRef="state0"/>
+        <spirit:externalPortReference spirit:portRef="state_leds"/>
       </spirit:adHocConnection>
       <spirit:adHocConnection>
         <spirit:name>trg_in_1</spirit:name>
