@@ -20,23 +20,26 @@ vivado_PROJECTS = timing_brd
 timing_brd_VERSION = 1.0
 timing_brd_IP_SOURCES = timing_1.0
 timing_brd_SOURCES = \
-	prj_src/system.bd \
-	prj_src/hdl/system_wrapper.v \
-	prj_src/redpitaya.xdc
-timing_brd_PRJCFG = prj_src/w7x_timing_brd_setup.tcl
+	src_prj/system.bd \
+	src_prj/hdl/system_wrapper.v \
+	src_prj/redpitaya.xdc
+timing_brd_PRJCFG = src_prj/w7x_timing_brd_setup.tcl
 
-.PHONY: linux
-linux:
-	$(MAKE) $(AM_MAKEFLAGS) -C linux all
+.PHONY: linux usermem
+usermem:
+	$(MAKE) $(AM_MAKEFLAGS) -C ../usermem all
+
+linux: usermem
+	$(MAKE) $(AM_MAKEFLAGS) -C linux clean all
 
 mostly-clean::
 	@$(RM) *_jou.tcl *.backup.tcl\
-	;$(RM) -rf $(addprefix prj_src/,hw_handoff ip ipshared ui system.bxml system_ooc.xdc)
+	;$(RM) -rf $(addprefix src_prj/,hw_handoff ip ipshared ui system.bxml system_ooc.xdc)
 
 clean:: mostly-clean
 	@$(MAKE) $(AM_MAKEFLAGS) -C linux clean
 
 clean-local:: clean
-	$(RM) -rf ip prj edit
+	@$(RM) -rf ip prj edit
 
 all: linux cores projects bitstream

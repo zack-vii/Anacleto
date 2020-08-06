@@ -27,9 +27,9 @@
 #
 # 3. The following remote source files that were added to the original project:-
 #
-#    "/git/Anacleto/projects/w7x_timing/prj_src/system.bd"
-#    "/git/Anacleto/projects/w7x_timing/prj_src/hdl/system_wrapper.v"
-#    "/git/Anacleto/projects/w7x_timing/prj_src/redpitaya.xdc"
+#    "/git/Anacleto/projects/w7x_timing/src_prj/system.bd"
+#    "/git/Anacleto/projects/w7x_timing/src_prj/hdl/system_wrapper.v"
+#    "/git/Anacleto/projects/w7x_timing/src_prj/redpitaya.xdc"
 #
 #*****************************************************************************************
 global env
@@ -124,8 +124,8 @@ update_ip_catalog -rebuild
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
 set files [list \
- "[file normalize "$origin_dir/prj_src/system.bd"]"\
- "[file normalize "$origin_dir/prj_src/hdl/system_wrapper.v"]"\
+ "[file normalize "$origin_dir/src_prj/system.bd"]"\
+ "[file normalize "$origin_dir/src_prj/hdl/system_wrapper.v"]"\
 ]
 add_files -norecurse -fileset $obj $files
 
@@ -148,9 +148,9 @@ if {[string equal [get_filesets -quiet constrs_1] ""]} {
 set obj [get_filesets constrs_1]
 
 # Add/Import constrs file and set constrs file properties
-set file "[file normalize "$origin_dir/prj_src/redpitaya.xdc"]"
+set file "[file normalize "$origin_dir/src_prj/redpitaya.xdc"]"
 set file_added [add_files -norecurse -fileset $obj $file]
-set file "$origin_dir/prj_src/redpitaya.xdc"
+set file "$origin_dir/src_prj/redpitaya.xdc"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets constrs_1] [list "*$file"]]
 set_property -name "file_type" -value "XDC" -objects $file_obj

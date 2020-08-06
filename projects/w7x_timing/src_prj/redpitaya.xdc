@@ -45,7 +45,7 @@ set_property IOSTANDARD LVCMOS33 [get_ports {state_leds[*]}]
 create_clock -period 100.000 -name clk_in -waveform {0.000 50.000} [get_ports clk_in]
 set_clock_groups -name async -asynchronous -group clk_in -group clk_fpga_0
 #
-set_output_delay -clock [get_clocks clk_in] -min  0 [get_ports {state0[*] state1[*] state_leds[*]}]
-set_output_delay -clock [get_clocks clk_in] -max 10 [get_ports {state0[*] state1[*] state_leds[*]}]
-set_input_delay  -clock [get_clocks clk_in] -min  0 [get_ports {trg_in}]
-set_input_delay  -clock [get_clocks clk_in] -max 10 [get_ports {trg_in}]
+set_output_delay -clock [get_clocks clk_in] -min 3 [get_ports {state0[*] state1[*] state_leds[*]}]
+set_output_delay -clock [get_clocks clk_in] -max 8 [get_ports {state0[*] state1[*] state_leds[*]}]
+set_input_delay  -clock [get_clocks clk_in] -min 3 [get_ports {trg_in}]
+set_input_delay  -clock [get_clocks clk_in] -max 8 [get_ports {trg_in}]

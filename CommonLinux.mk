@@ -49,3 +49,7 @@ if WITH_DEVICE_SSHPASSWD
 	  $(DEVICE_USER)@$(DEVICE_IP):$(DEVICE_MODULES_DIR);
 endif
 endif
+
+.PHONY: kernelversion
+kernelversion:
+	@$($(MAKE) -C ${LINUX_SRCDIR} --no-print-directory kernelversion)

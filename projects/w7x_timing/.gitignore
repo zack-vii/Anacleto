@@ -1,7 +1,7 @@
 prj/
-prj_src/hw_handoff/
-prj_src/ipshared/
-prj_src/ui/
-prj_src/system.bxml
-prj_src/system_ooc.xdc
+src_prj/hw_handoff/
+src_prj/ipshared/
+src_prj/ui/
+src_prj/system.bxml
+src_prj/system_ooc.xdc
 linux/rptrig
