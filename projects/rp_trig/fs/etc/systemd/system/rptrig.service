@@ -1,0 +1,11 @@
+[Unit]
+Description=rptrig server
+After=network.target
+
+[Service]
+ExecStartPre=/bin/sh -c "/bin/cat /boot/fpga/fpga_rptrig.bit > /dev/xdevcfg"
+ExecStart=/bin/rptrig
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
