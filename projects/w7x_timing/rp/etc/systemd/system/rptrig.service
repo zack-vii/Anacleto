@@ -1,9 +1,11 @@
 [Unit]
 Description=rptrig server
-After=network.target rptrig_fpga.service
+After=network.target
 
 [Service]
+ExecStartPre=/bin/sh -c "/bin/cat /root/rptrig.bit > /dev/xdevcfg;/sbin/insmod /root/usermem.ko"
 ExecStart=/bin/rptrig
+ExecStopPost=/sbin/rmmod usermem.ko
 Restart=always
 
 [Install]
