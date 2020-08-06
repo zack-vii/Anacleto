@@ -8,6 +8,7 @@ if [ "0$2" -ge "1" ]
 then
   scp -r $S/fs/* $RP:/
   scp $S/out/lib*.so $RP:/lib/
+  ssh $RP /bin/mount -o remount,rw /boot
   scp $S/out/fpga_rptrig.bit $RP:/boot/fpga/
   ssh $RP "systemctl disable rptrig;systemctl enable rptrig"
   ../usermem/deploy.sh "$@"

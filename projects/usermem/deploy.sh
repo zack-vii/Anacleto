@@ -19,9 +19,10 @@ then
       ssh $RP passwd
     fi
     ssh $RP ". /etc/profile&&rw&&mount -o remount,rw /boot&&echo ok||echo failed"
+    ssh $RP /bin/mount -o remount,rw /boot
+    scp $S/devicetree.dtb $S/../../uImage $RP:/boot/
     module_path=/lib/modules/${KVER}-xilinx
     ssh $RP mkdir -p ${module_path}
-    scp $S/devicetree.dtb $S/../../uImage $RP:/boot/
     scp $S/linux/usermem.ko $RP:${module_path}
     scp -r $S/fs/* $RP:/
     ssh $RP depmod -a
