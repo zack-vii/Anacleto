@@ -66,34 +66,7 @@ static uint64_t get_clock()
 	return *(uint64_t*)buf;
 }
 
-
-int PREFIX(GetDevice)(rptrig_t **dev_p)
-{
-	*error = 0;
-	int pos = 0;
-	if (open_dev(&pos))
-	{
-		fputs(error, stderr);
-		dev_p = NULL;
-		return C_DEV_ERROR;
-	}
-	*dev_p = dev;
-	return C_OK;
-}
-
-int PREFIX(Close)()
-{
-	return dev ? usermem_close((void*)dev) : 0;
-}
-
-int PREFIX(GetClock)(uint64_t * clock)
-{
-	INIT_DEVICE
-	*clock = get_clock();
-	return C_OK;
-}
-
-int PREFIX(GetStatus)(int idx, int *pos)
+int get_status(int idx, int *pos)
 {
 	int pos_in = *pos;
 	if (idx >= MAX_STATUS || idx < 0)
@@ -103,7 +76,9 @@ int PREFIX(GetStatus)(int idx, int *pos)
 	}
 	uint8_t status, i;
 	if (open_dev(pos)) return -1;
+	fprintf(stderr, "|%d,dev:%x", idx, (uint32_t)dev);
 	status = dev->r_status[idx];
+	fprintf(stderr, "|%d", status);
 	if (idx<3)
 	{ //it is a status byte
 		switch (status & STATUS_MASK)
@@ -142,7 +117,7 @@ int PREFIX(GetStatus)(int idx, int *pos)
 		{
 			*pos += sprintf(error+*pos, " - errors:\n");
 			for (i = 1 ; i < 3 ; i++)
-			    PREFIX(GetStatus)(i, pos);
+			    get_status(i, pos);
 			*pos += sprintf(error+*pos, " @ ticks: %llu\n", get_clock());
 		}
 		if (pos_in==0)
@@ -151,10 +126,36 @@ int PREFIX(GetStatus)(int idx, int *pos)
 	return status;
 }
 
+int PREFIX(GetDevice)(rptrig_t **dev_p)
+{
+	*error = 0;
+	int pos = 0;
+	if (open_dev(&pos))
+	{
+		fputs(error, stderr);
+		dev_p = NULL;
+		return C_DEV_ERROR;
+	}
+	*dev_p = dev;
+	return C_OK;
+}
+
+int PREFIX(Close)()
+{
+	return dev ? usermem_close((void*)dev) : 0;
+}
+
+int PREFIX(GetClock)(uint64_t * clock)
+{
+	INIT_DEVICE
+	*clock = get_clock();
+	return C_OK;
+}
+
 int PREFIX(GetState)()
 {
 	INIT_DEVICE
-	return PREFIX(GetStatus)(0, &pos);
+	return get_status(0, &pos);
 }
 
 int PREFIX(GetParams)(

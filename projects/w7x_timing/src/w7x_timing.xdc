@@ -1,5 +1,5 @@
 create_clock -period 100 -name clk_ext_in -waveform {0 50} [get_ports clk_ext_in]
-create_clock -period   4 -name clk_axi_in -waveform {0  2} [get_ports clk_axi_in]
+create_clock -period  10 -name clk_axi_in -waveform {0  5} [get_ports clk_axi_in]
 set_clock_groups -name async -asynchronous -group {clk_ext_in} -group {clk_axi_in}
 
 set_input_delay  -clock [get_clocks clk_axi_in] -min  0 [get_ports s00_axi_* -filter {DIRECTION==IN}]

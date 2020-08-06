@@ -8,9 +8,9 @@ VENDOR = w7x
 LIBRARY = ip
 vivado_CORES = timing_1.0
 timing_SOURCES = \
-	src/w7x_timing_v1_0_S00_AXI.vhd \
-	src/w7x_timing_v1_0.vhd \
 	src/w7x_timing.vhd \
+	src/w7x_timing_axi.vhd \
+	src/w7x_timing_prog.vhd \
 	src/w7x_timing.xdc \
 	src/w7x_timing.mdd
 timing_IPCFG = src/w7x_timing_setup.tcl
@@ -29,15 +29,14 @@ timing_brd_PRJCFG = prj_src/w7x_timing_brd_setup.tcl
 linux:
 	$(MAKE) $(AM_MAKEFLAGS) -C linux all
 
-
-clean-local::
-	$(RM) -rf ip prj edit
-
 mostly-clean::
 	@$(RM) *_jou.tcl *.backup.tcl\
 	;$(RM) -rf $(addprefix prj_src/,hw_handoff ip ipshared ui system.bxml system_ooc.xdc)
 
-clean::
+clean:: mostly-clean
 	@$(MAKE) $(AM_MAKEFLAGS) -C linux clean
+
+clean-local:: clean
+	$(RM) -rf ip prj edit
 
 all: linux cores projects bitstream

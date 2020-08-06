@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity w7x_timing_v1_0_S00_AXI is
+entity w7x_timing_axi is
     generic (
       DATA_COUNT     : integer := 16;
         -- S_AXI data bus parameters
@@ -41,9 +41,9 @@ entity w7x_timing_v1_0_S00_AXI is
      S_AXI_RVALID  : out std_logic;
      S_AXI_RREADY  : in  std_logic
     );
-end w7x_timing_v1_0_S00_AXI;
+end w7x_timing_axi;
 
-architecture arch_imp of w7x_timing_v1_0_S00_AXI is
+architecture arch_imp of w7x_timing_axi is
     constant DATA_LIMIT : unsigned(ADDR_WIDTH-1 downto 0) := to_unsigned(DATA_COUNT,ADDR_WIDTH);
     -- AXI4LITE signals
     signal axi_aaddr   : unsigned(ADDR_WIDTH-1 downto 0);

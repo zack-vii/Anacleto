@@ -4,298 +4,321 @@ use ieee.numeric_std.all;
 
 entity w7x_timing is
     generic (
-      ADDR_WIDTH  : integer := 15;
-      DATA_WIDTH  : integer := 64;
-      TIME_WIDTH  : integer := 40;
-      HEAD_COUNT  : integer := 6
+        BRAM_SIZE  : integer := 54272;
+        BRAM_WIDTH : integer := 40;
+        DATA_WIDTH : integer := 64;
+        ADDR_WIDTH : integer := 16
     );
     port (
-       clk_in     : in  STD_LOGIC;
-       trigger_in : in  STD_LOGIC;
-       on_in      : in  STD_LOGIC;
-       armed_in   : in  STD_LOGIC;
-       clear_in   : in  STD_LOGIC;
-       head_in    : in  STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
-       sample_in  : in  STD_LOGIC_VECTOR(TIME_WIDTH-1 downto 0);
-       index_out  : out UNSIGNED(ADDR_WIDTH-1 downto 0);
-       state_out  : out STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0)
+        clk_axi_in : in  STD_LOGIC;
+        clk_int_in : in  STD_LOGIC;
+        clk_ext_in : in  STD_LOGIC;
+        trg_in     : in  STD_LOGIC;
+        state_do   : out STD_LOGIC_VECTOR (7 downto 2);
+        state_led  : out STD_LOGIC_VECTOR (7 downto 0);
+        power_down : out STD_LOGIC;
+        -- PortA of blk_mem_gen
+        bram_clka  : out  STD_LOGIC;
+        bram_douta : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
+        bram_dina  : out  STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
+        bram_addra : out  STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
+        bram_ena   : out  STD_LOGIC;
+        bram_wea   : out  STD_LOGIC;
+        bram_rsta  : out  STD_LOGIC;
+        -- PortB of blk_mem_gen
+        bram_addrb : out  STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
+        bram_clkb  : out  STD_LOGIC;
+        bram_doutb : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
+        bram_rstb  : out  STD_LOGIC;
+        -- Ports of Axi Slave Bus Interface S00_AXI
+        s00_axi_resetn  : in  std_logic;
+        s00_axi_awaddr  : in  std_logic_vector(ADDR_WIDTH+DATA_WIDTH/32 downto 0);
+        s00_axi_awprot  : in  std_logic_vector(2 downto 0);
+        s00_axi_awvalid : in  std_logic;
+        s00_axi_awready : out std_logic;
+        s00_axi_wdata   : in  std_logic_vector(DATA_WIDTH-1 downto 0);
+        s00_axi_wstrb   : in  std_logic_vector((DATA_WIDTH/8)-1 downto 0);
+        s00_axi_wvalid  : in  std_logic;
+        s00_axi_wready  : out std_logic;
+        s00_axi_bresp   : out std_logic_vector(1 downto 0);
+        s00_axi_bvalid  : out std_logic;
+        s00_axi_bready  : in  std_logic;
+        s00_axi_araddr  : in  std_logic_vector(ADDR_WIDTH+DATA_WIDTH/32 downto 0);
+        s00_axi_arprot  : in  std_logic_vector(2 downto 0);
+        s00_axi_arvalid : in  std_logic;
+        s00_axi_arready : out std_logic;
+        s00_axi_rdata   : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        s00_axi_rresp   : out std_logic_vector(1 downto 0);
+        s00_axi_rvalid  : out std_logic;
+        s00_axi_rready  : in  std_logic
     );
-end  w7x_timing;
+end w7x_timing;
 
+architecture arch_imp of w7x_timing is
+ -- component declaration
+    component w7x_timing_axi is
+    generic (
+      DATA_WIDTH     : integer;
+      ADDR_WIDTH     : integer;
+      AXI_ADDR_WIDTH : integer
+    );
+    port (
+     ADDR_OUT      : out   UNSIGNED(ADDR_WIDTH-1 downto 0);
+     DATA_IN       : in    STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+     DATA_OUT      : out   STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+     STRB_OUT      : out   STD_LOGIC_VECTOR((DATA_WIDTH/8)-1 downto 0);
+     EN_OUT        : out   STD_LOGIC;
+     WE_OUT        : out   STD_LOGIC;
+     -- AXI ports
+     S_AXI_CLK     : in  std_logic;
+     S_AXI_RESETN  : in  std_logic;
+     S_AXI_AWADDR  : in  std_logic_vector(AXI_ADDR_WIDTH-1 downto 0);
+     S_AXI_AWPROT  : in  std_logic_vector(2 downto 0);
+     S_AXI_AWVALID : in  std_logic;
+     S_AXI_AWREADY : out std_logic;
+     S_AXI_WDATA   : in  std_logic_vector(DATA_WIDTH-1 downto 0);
+     S_AXI_WSTRB   : in  std_logic_vector((DATA_WIDTH/8)-1 downto 0);
+     S_AXI_WVALID  : in  std_logic;
+     S_AXI_WREADY  : out std_logic;
+     S_AXI_BRESP   : out std_logic_vector(1 downto 0);
+     S_AXI_BVALID  : out std_logic;
+     S_AXI_BREADY  : in  std_logic;
+     S_AXI_ARADDR  : in  std_logic_vector(AXI_ADDR_WIDTH-1 downto 0);
+     S_AXI_ARPROT  : in  std_logic_vector(2 downto 0);
+     S_AXI_ARVALID : in  std_logic;
+     S_AXI_ARREADY : out std_logic;
+     S_AXI_RDATA   : out std_logic_vector(DATA_WIDTH-1 downto 0);
+     S_AXI_RRESP   : out std_logic_vector(1 downto 0);
+     S_AXI_RVALID  : out std_logic;
+     S_AXI_RREADY  : in  std_logic
+    );
+    end component w7x_timing_axi;
 
-architecture Behavioral of w7x_timing is
-    constant zero32     : unsigned(        32-1 downto 0) := to_unsigned(0,32);
-    constant zeroaddr   : unsigned(ADDR_WIDTH-1 downto 0) := to_unsigned(0,ADDR_WIDTH);
-    constant zerotime   : unsigned(TIME_WIDTH-1 downto 0) := to_unsigned(0,TIME_WIDTH);
-    constant one32      : unsigned(        32-1 downto 0) := to_unsigned(1,32);
-    constant oneaddr    : unsigned(ADDR_WIDTH-1 downto 0) := to_unsigned(1,ADDR_WIDTH);
-    constant onetime    : unsigned(TIME_WIDTH-1 downto 0) := to_unsigned(1,TIME_WIDTH);
-     -- summary of valid states                                SGPWActE
-    constant IDLE           : std_logic_vector(7 downto 0) := "00000110";--  6
-    constant ARMED          : std_logic_vector(7 downto 0) := "00001110";-- 14
-    constant WAITING_DELAY  : std_logic_vector(7 downto 0) := "00010110";-- 22
-    constant WAITING_SAMPLE : std_logic_vector(7 downto 0) := "01110010";--114
-    constant WAITING_LOW    : std_logic_vector(7 downto 0) := "01010010";-- 82
-    constant WAITING_HIGH   : std_logic_vector(7 downto 0) := "11010010";--210
-    constant WAITING_REPEAT : std_logic_vector(7 downto 0) := "00110010";-- 50
-    -- signals
-    signal state        : std_logic_vector(7 downto 0) := IDLE;
-    signal error        : std_logic_vector(DATA_WIDTH-1 downto 8) := (others => '0');   
-    -- measure number of samples in sequence, i.e. len(times)
-    signal sample_count : unsigned(ADDR_WIDTH-1 downto 0) := zeroaddr; -- start_cycle   =0, do_waiting_sample ++
-    signal sample_total : unsigned(ADDR_WIDTH-1 downto 0);
-    -- measure number of repetitions
-    signal repeat_count : unsigned(31 downto 0) := zero32; -- start_program =0, start_waiting_repeat ++
-    signal repeat_total : unsigned(31 downto 0);
-    -- start of next burst
-    signal sample       : unsigned(TIME_WIDTH-1 downto 0);
-    -- measure number of bursts
-    signal burst_count  : unsigned(TIME_WIDTH-1 downto 0) := zerotime; -- start_program =0, start_waiting_repeat ++
-    signal burst_total  : unsigned(TIME_WIDTH-1 downto 0);
-    -- measure high and low of signal
-    signal period_ticks : unsigned(TIME_WIDTH-1 downto 0) := zerotime;
-    signal high_total   : unsigned(TIME_WIDTH-1 downto 0);
-    signal period_total : unsigned(TIME_WIDTH-1 downto 0);
-    -- sequence counter
-    signal cycle_ticks  : unsigned(TIME_WIDTH-1 downto 0) := zerotime;
-    signal delay_total  : unsigned(TIME_WIDTH-1 downto 0);
-    signal cycle_total  : unsigned(TIME_WIDTH-1 downto 0);
+    component w7x_timing_prog is
+    generic (
+      HEAD_COUNT  : integer;
+      ADDR_WIDTH  : integer;
+      TIME_WIDTH  : integer;
+      DATA_WIDTH  : integer
+    );
+    port (
+    clk_in     : in  STD_LOGIC;
+    trigger_in : in  STD_LOGIC;
+    on_in      : in  STD_LOGIC;
+    armed_in   : in  STD_LOGIC;
+    clear_in   : in  STD_LOGIC;
+    head_in    : in  STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
+    sample_in  : in  STD_LOGIC_VECTOR(TIME_WIDTH-1 downto 0);
+    index_out  : out UNSIGNED(ADDR_WIDTH-1 downto 0);
+    state_out  : out STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0)
+    );
+    end component w7x_timing_prog;
+
+    constant STAT_COUNT: integer := 1;
+    constant CTRL_COUNT: integer := 1;
+    constant HEAD_COUNT: integer := 6;
+    constant DATA_COUNT: integer := 8;
+    constant STAT_MIN  : integer := 0;
+    constant STAT_MAX  : integer := STAT_COUNT;
+    constant CTRL_MIN  : integer := STAT_MAX;
+    constant CTRL_MAX  : integer := CTRL_MIN+CTRL_COUNT;
+    constant HEAD_MIN  : integer := CTRL_MAX;
+    constant HEAD_MAX  : integer := HEAD_MIN+HEAD_COUNT;
+
+    constant STAT_BASE : integer := STAT_MIN*DATA_WIDTH;
+    constant STAT_HEAD : integer := STAT_MAX*DATA_WIDTH-1;
+    constant CTRL_BASE : integer := CTRL_MIN*DATA_WIDTH;
+    constant CTRL_HEAD : integer := CTRL_MAX*DATA_WIDTH-1;
+    constant HEAD_BASE : integer := HEAD_MIN*DATA_WIDTH;
+    constant HEAD_HEAD : integer := HEAD_MAX*DATA_WIDTH-1;
+    constant offset    : unsigned(ADDR_WIDTH-1 downto 0) := to_unsigned(DATA_COUNT,ADDR_WIDTH);
+
+    function addr2base(addr : unsigned) return integer is begin
+      return to_integer(addr)*DATA_WIDTH;
+    end addr2base;
+    signal m_addr    : unsigned(ADDR_WIDTH-1 downto 0);
+    signal m_rdata   : std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal m_wdata   : std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal m_strb    : std_logic_vector((DATA_WIDTH/8)-1 downto 0);
+    signal s_addr    : unsigned(ADDR_WIDTH-1 downto 0);
+
+    signal state     : std_logic_vector(STAT_COUNT*DATA_WIDTH-1 downto 0);
+    signal head_save : std_logic_vector(HEAD_COUNT*DATA_WIDTH-1 downto 0) := (others => '0');
+
+    signal data_buf  : std_logic_vector(HEAD_HEAD               downto 0) := (others => '0');
+    alias  state_buf : std_logic_vector(STAT_COUNT*DATA_WIDTH-1 downto 0) is data_buf(STAT_HEAD downto STAT_BASE);
+    alias  ctrl_buf  : std_logic_vector(CTRL_COUNT*DATA_WIDTH-1 downto 0) is data_buf(CTRL_HEAD downto CTRL_BASE);
+    alias  head_buf  : std_logic_vector(HEAD_COUNT*DATA_WIDTH-1 downto 0) is data_buf(HEAD_HEAD downto HEAD_BASE);
+
+    signal bram_douta_buf : std_logic_vector(BRAM_WIDTH-1 downto 0);
+
+    alias cc_init    : std_logic_vector(7 downto 0) is ctrl_buf(0*8+7 downto 0*8);
+    alias cc_trig    : std_logic_vector(7 downto 0) is ctrl_buf(1*8+7 downto 1*8);
+    alias cc_clear   : std_logic_vector(7 downto 0) is ctrl_buf(2*8+7 downto 2*8);
+    alias cc_save    : std_logic_vector(7 downto 0) is ctrl_buf(3*8+7 downto 3*8);
+    alias cc_extclk  : std_logic_vector(7 downto 0) is ctrl_buf(4*8+7 downto 4*8);
+    alias cc_invert  : std_logic_vector(7 downto 0) is ctrl_buf(5*8+7 downto 5*8);
+    alias cc_gate    : std_logic_vector(7 downto 0) is ctrl_buf(6*8+7 downto 6*8);
+    alias cc_gate2   : std_logic_vector(7 downto 0) is ctrl_buf(7*8+7 downto 7*8);
+    alias c_on       : std_logic is cc_init(0);
+    alias c_arm      : std_logic is cc_init(1);
+    alias c_rearm    : std_logic is cc_init(2);
+    alias c_reinit   : std_logic is cc_init(3);
+    alias c_trig     : std_logic is cc_trig(0);
+    alias c_clear    : std_logic is cc_clear(0);
+    alias c_save     : std_logic is cc_save(0);
+    alias c_extclk   : std_logic is cc_extclk(0);
+
+    signal trigger   : std_logic;
+    alias  sig       : std_logic is state(7);
+    alias  gate      : std_logic is state(6);
+    alias  running   : std_logic is state(4);
+    alias  armed     : std_logic is state(3);
+    alias  ok        : std_logic is state(0);
+    alias  gate2     : std_logic is s_addr(0);
+    -- gate2 is high before odd indices 0, 1, 2, 3
+    --                                 _|""|__|""|__
+
+    signal clk       : std_logic := '0';
+
 begin
-    -- set output
-    index_out    <= sample_count when sample_count<sample_total else zeroaddr;
-    state_out(7 downto 1) <= state(7 downto 1);
-    state_out(0) <= not error(8+1);
-    state_out(DATA_WIDTH-1 downto 8) <= error;
+clk <= clk_ext_in when c_extclk = '1' else clk_int_in;
 
-    -- set input
-    sample       <= unsigned(sample_in(TIME_WIDTH-1 downto 0));
-  buffer_input: process(clk_in,sample_in,head_in) begin
-    if falling_edge(clk_in) then
-      delay_total  <= unsigned(head_in(0*DATA_WIDTH+TIME_WIDTH-1  downto 0*DATA_WIDTH));
-      high_total   <= unsigned(head_in(1*DATA_WIDTH+TIME_WIDTH-1  downto 1*DATA_WIDTH));
-      period_total <= unsigned(head_in(2*DATA_WIDTH+TIME_WIDTH-1  downto 2*DATA_WIDTH));
-      burst_total  <= unsigned(head_in(3*DATA_WIDTH+TIME_WIDTH-1  downto 3*DATA_WIDTH));
-      cycle_total  <= unsigned(head_in(4*DATA_WIDTH+TIME_WIDTH-1  downto 4*DATA_WIDTH));
-      repeat_total <= unsigned(head_in(5*DATA_WIDTH+31            downto 5*DATA_WIDTH));
-      sample_total <= unsigned(head_in(5*DATA_WIDTH+ADDR_WIDTH+31 downto 5*DATA_WIDTH+32));
+trigger    <= c_trig or trg_in;
+power_down <= c_extclk;
+---- BRAM
+bram_clka   <= clk_axi_in;
+bram_rsta   <= '0';
+bram_addra  <= std_logic_vector(m_addr-offset);
+bram_update: process(clk_axi_in,m_strb,m_wdata,bram_douta) begin
+  if rising_edge(clk_axi_in) then
+    bram_douta_buf <= bram_douta;
+    for i in 0 to BRAM_WIDTH/8-1 loop
+      if m_strb(i) = '1'
+      then bram_dina(i*8+7 downto i*8) <= m_wdata(i*8+7 downto i*8);
+      else bram_dina(i*8+7 downto i*8) <= bram_douta_buf(i*8+7 downto i*8);
+      end if;
+    end loop;
+  end if;
+end process bram_update;
+m_rdata(BRAM_WIDTH-1 downto 0)          <= data_buf(addr2base(m_addr)+BRAM_WIDTH-1 downto addr2base(m_addr))
+   when m_addr < offset else bram_douta;
+m_rdata(DATA_WIDTH-1 downto BRAM_WIDTH) <= data_buf(addr2base(m_addr)+DATA_WIDTH-1 downto addr2base(m_addr)+BRAM_WIDTH)
+   when m_addr < offset else (others => '0');
+
+-- b channel
+bram_rstb  <= '0';
+bram_clkb  <= clk;
+bram_addrb <= std_logic_vector(s_addr);
+---- translate DOUT states
+output: for i in 2 to 7 generate
+  state_do(i) <= not gate  when (    cc_invert(i) and     cc_gate(i) and not cc_gate2(i)) = '1'
+            else not sig   when (    cc_invert(i) and not cc_gate(i) and not cc_gate2(i)) = '1'
+            else gate      when (not cc_invert(i) and     cc_gate(i) and not cc_gate2(i)) = '1'
+            else sig       when (not cc_invert(i) and not cc_gate(i) and not cc_gate2(i)) = '1'
+            else not gate2 when (    cc_invert(i) and                        cc_gate2(i)) = '1'
+            else gate2;
+
+end generate output;
+---- translate LED states
+state_led(0) <= not trigger;
+state_led(1) <= clk;
+state_led(2) <= sig;--sig
+state_led(3) <= gate2 when cc_gate2(2) = '1' else gate;--gate
+state_led(4) <= (c_arm and not c_rearm) or c_reinit;
+state_led(5) <= c_rearm;
+state_led(6) <= c_extclk;
+state_led(7) <= not state(0);--error/not ok
+
+---- DATA_BUF
+update_buffer: process(clk_axi_in,m_addr,m_strb,m_wdata,head_save,data_buf,state)
+begin
+  if rising_edge(clk_axi_in) then
+    -- handle driver write operations
+    if m_addr < offset then
+      for i in 0 to DATA_WIDTH/8-1 loop
+        if m_strb(i) = '1' then
+          data_buf(addr2base(m_addr)+i*8+7 downto addr2base(m_addr)+i*8) <= m_wdata(i*8+7 downto i*8);
+        end if;
+      end loop;
     end if;
-  end process buffer_input;
-  clock_gen:  process(clk_in, on_in, armed_in, trigger_in, clear_in, 
-                      delay_total, high_total, period_total,
-                      cycle_total, repeat_total,
-                      sample_total, sample) is
-    procedure inc_cycle is
-    begin
-      cycle_ticks <= cycle_ticks  + 1;
-    end inc_cycle;
-    
-    procedure inc_period is
-    begin
-      period_ticks <= period_ticks + 1;
-      inc_cycle;
-    end inc_period;
-
-    procedure start_sample is
-    -- resets period_ticks (1)
-    begin
-      state <= WAITING_HIGH;
-      period_ticks <= onetime;
-    end start_sample;
-
-    procedure start_burst(csample : unsigned) is
-    -- resets burst_count
-    -- increments sample_count
-    begin
-      burst_count  <= onetime;
-      sample_count <= csample + 1;
-      start_sample;
-    end start_burst;
-
-    procedure start_armed is
-    -- resets everything
-    begin
-      cycle_ticks  <= onetime;
-      burst_count  <= zerotime;
-      period_ticks <= onetime;
-      sample_count <= zeroaddr;
-      repeat_count <= zero32;
-      state <= ARMED;
-    end start_armed;
-
-    procedure do_rearm is
-    begin
-      if armed_in = '1' then
-        start_armed;
-      else
-        state <= IDLE;
+    -- handle fpga write operations
+    state_buf <= state;
+    if armed = '0' then
+      if (trigger = '1' and c_rearm ='0') then
+        c_arm <= '0';
       end if;
-    end do_rearm;        
-    
-    procedure do_error(cstat : std_logic_vector(7 downto 0)) is
-    begin
-      --error(ERROR_COUNT*8-1 downto 8) <= error(ERROR_COUNT*8-9 downto 0);
-      error(15 downto 8)  <= cstat;
-      error(23 downto 16) <= state;
-      error(DATA_WIDTH-1 downto 24) <= std_logic_vector(cycle_ticks);
-      do_rearm;
-    end do_error;
+      cc_trig <= (others => '0');
+      if (c_arm = '0' and  running = '0') then
+        c_on <= '0';
+      end if;
+    elsif c_reinit = '1' then
+      head_buf <= head_save;
+    end if;
+    if ok = '1' then
+      cc_clear <= (others => '0');
+    end if;
+    if c_save = '1' then
+      head_save <= head_buf;
+      cc_save <= (others => '0');
+    end if;
+  end if;
+end process update_buffer;
 
-    procedure do_waiting_sample is
-    begin
-      if cycle_ticks = sample then
-        start_burst(sample_count);
-        inc_cycle;
-      elsif cycle_ticks > sample then
-        do_error(WAITING_SAMPLE);
-      else
-        state <= WAITING_SAMPLE;
-        inc_cycle;
-      end if;
-    end do_waiting_sample;
+---- Instantiation of Axi Bus Interface S00_AXI
+axi : w7x_timing_axi
+    generic map (
+        DATA_WIDTH     => DATA_WIDTH,
+        ADDR_WIDTH     => ADDR_WIDTH,
+        AXI_ADDR_WIDTH => ADDR_WIDTH+DATA_WIDTH/32+1
+    )
+    port map (
+        ADDR_OUT      => m_addr,
+        DATA_IN       => m_rdata,
+        DATA_OUT      => m_wdata,
+        STRB_OUT      => m_strb,
+        WE_OUT        => bram_wea,
+        EN_OUT        => bram_ena,
+        S_AXI_CLK     => clk_axi_in,
+        S_AXI_RESETN  => s00_axi_resetn,
+        S_AXI_AWADDR  => s00_axi_awaddr,
+        S_AXI_AWPROT  => s00_axi_awprot,
+        S_AXI_AWVALID => s00_axi_awvalid,
+        S_AXI_AWREADY => s00_axi_awready,
+        S_AXI_WDATA   => s00_axi_wdata,
+        S_AXI_WSTRB   => s00_axi_wstrb,
+        S_AXI_WVALID  => s00_axi_wvalid,
+        S_AXI_WREADY  => s00_axi_wready,
+        S_AXI_BRESP   => s00_axi_bresp,
+        S_AXI_BVALID  => s00_axi_bvalid,
+        S_AXI_BREADY  => s00_axi_bready,
+        S_AXI_ARADDR  => s00_axi_araddr,
+        S_AXI_ARPROT  => s00_axi_arprot,
+        S_AXI_ARVALID => s00_axi_arvalid,
+        S_AXI_ARREADY => s00_axi_arready,
+        S_AXI_RDATA   => s00_axi_rdata,
+        S_AXI_RRESP   => s00_axi_rresp,
+        S_AXI_RVALID  => s00_axi_rvalid,
+        S_AXI_RREADY  => s00_axi_rready
+    );
 
-    procedure start_cycle is
-    -- resets sample_count (1:0)
-    -- resets cycle_ticks  (1)
-    begin
-      if sample = 0 then -- short cut if first sample is at 0
-        start_burst(zeroaddr);
-      else
-        sample_count <= zeroaddr;
-        period_ticks <= zerotime;
-        state <= WAITING_SAMPLE;
-      end if;
-      cycle_ticks <= onetime;
-    end start_cycle;
-    
-    procedure do_waiting_repeat is
-    begin
-      if cycle_ticks = cycle_total then -- short cut if cycle_total just fits sequence
-        start_cycle;
-      elsif cycle_ticks > cycle_total then
-        do_error(WAITING_REPEAT);
-      else
-        state <= WAITING_REPEAT;
-        inc_cycle;
-      end if;
-    end do_waiting_repeat;
-
-    procedure start_waiting_repeat is
-    -- increments repeat_count
-    begin
-      if repeat_count < repeat_total then
-        repeat_count <= repeat_count + 1;
-        do_waiting_repeat;
-      else
-        do_rearm;
-      end if;
-    end start_waiting_repeat;
-
-    procedure start_waiting_sample is
-    begin
-      if sample_count = sample_total then
-        start_waiting_repeat;
-      elsif sample_count > sample_total then
-        do_error(WAITING_SAMPLE);       
-      else
-        do_waiting_sample;
-      end if;
-    end start_waiting_sample;     
-
-    procedure do_waiting_low is
-    begin
-      if period_ticks = period_total then
-        if burst_count = burst_total then
-          start_waiting_sample;
-        elsif burst_count > burst_total then
-          do_error(WAITING_LOW);
-        else
-          burst_count <= burst_count + 1;
-          start_sample;
-          inc_cycle;
-        end if;
-      elsif period_ticks > period_total then
-        do_error(WAITING_LOW);
-      else
-        state <= WAITING_LOW;
-        inc_period;
-      end if;
-    end do_waiting_low;
-
-    procedure do_waiting_high is
-    begin
-      if period_ticks = high_total then
-        state <= WAITING_LOW;
-        inc_period;
-      elsif period_ticks > high_total then
-        do_error(WAITING_HIGH);
-      else
-        state <= WAITING_HIGH;
-        inc_period;
-      end if;
-    end do_waiting_high;
-
-    procedure do_waiting_delay is
-    begin
-      if cycle_ticks = delay_total then
-        if repeat_total > 0 and sample_total > 0 then
-          start_cycle;
-        else
-          do_rearm;
-        end if;
-      elsif cycle_ticks > delay_total then
-        do_error(WAITING_DELAY);
-      else
-        state <= WAITING_DELAY;
-        inc_cycle;
-      end if;
-    end do_waiting_delay;
-
-    procedure start_program is
-    -- resets repeat_count (1)
-    -- resets cycle_ticks (_:1)
-    begin
-      repeat_count <= one32;
-      if delay_total = 0 then -- short cut if no delay
-        start_cycle;
-      else
-        state <= WAITING_DELAY;
-        cycle_ticks <= onetime;
-       end if;
-    end start_program;
-
-  begin  -- main program
-    if rising_edge(clk_in) then
-      -- reset flags
-      if clear_in = '1' then
-        error <= (others => '0');
-      end if;
-      if error(8+1) = '0' then
-        error(DATA_WIDTH-1 downto 24) <= std_logic_vector(cycle_ticks);
-      end if;
-      if on_in = '0' then
-        state <= IDLE;
-      else
-        case state is
-          when ARMED => 
-            if trigger_in = '1' then
-              start_program;
-            end if;
-          when WAITING_DELAY =>
-            do_waiting_delay;
-          when WAITING_SAMPLE =>
-            do_waiting_sample;
-          when WAITING_HIGH =>
-            do_waiting_high;
-          when WAITING_LOW =>
-            do_waiting_low;
-          when WAITING_REPEAT =>
-            do_waiting_repeat;
-          when IDLE =>
-            start_armed;
-          when others =>
-            do_error(IDLE);
-        end case;
-      end if;
-    end if; -- rising_edge(clk)
-  end process clock_gen;
-end Behavioral;
+---- Instantiation of main program
+prog : w7x_timing_prog
+    generic map (
+        DATA_WIDTH => DATA_WIDTH,
+        TIME_WIDTH => BRAM_WIDTH,
+        ADDR_WIDTH => ADDR_WIDTH,
+        HEAD_COUNT => HEAD_COUNT
+    )
+    port map (
+       clk_in      => clk,
+       trigger_in  => trigger,
+       on_in       => c_on,
+       armed_in    => c_arm,
+       clear_in    => c_clear,
+       index_out   => s_addr,
+       state_out   => state,
+       head_in     => head_buf,
+       sample_in   => bram_doutb
+    );
+end arch_imp;

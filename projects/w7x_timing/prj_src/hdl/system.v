@@ -1,8 +1,8 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Wed Aug  5 22:59:10 2020
-//Host        : mds-data-1 running 64-bit Ubuntu 16.04.6 LTS
+//Date        : Thu Aug  6 05:11:23 2020
+//Host        : mds-data-1 running 64-bit unknown
 //Command     : generate_target system.bd
 //Design      : system
 //Purpose     : IP block netlist
@@ -498,7 +498,7 @@ module s00_couplers_imp_1XH0AG
         .s_axi_wvalid(auto_us_to_s00_data_fifo_WVALID));
 endmodule
 
-(* CORE_GENERATION_INFO = "system,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLibrary=BlockDiagram,x_ipName=system,x_ipVersion=1.00.a,x_ipLanguage=VERILOG,numBlks=11,numReposBlks=9,numNonXlnxBlks=1,numHierBlks=2,maxHierDepth=0,numSysgenBlks=0,numHlsBlks=0,numHdlrefBlks=0,numPkgbdBlks=0,bdsource=USER,synth_mode=Global}" *) (* HW_HANDOFF = "system.hwdef" *) 
+(* CORE_GENERATION_INFO = "system,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLibrary=BlockDiagram,x_ipName=system,x_ipVersion=1.00.a,x_ipLanguage=VERILOG,numBlks=10,numReposBlks=8,numNonXlnxBlks=1,numHierBlks=2,maxHierDepth=0,numSysgenBlks=0,numHlsBlks=0,numHdlrefBlks=0,numPkgbdBlks=0,bdsource=USER,synth_mode=Global}" *) (* HW_HANDOFF = "system.hwdef" *) 
 module system
    (DDR_addr,
     DDR_ba,
@@ -649,10 +649,9 @@ module system
   wire [39:0]w7x_timing_0_BRAM_PORTB_DOUT;
   wire [7:2]w7x_timing_0_state_do;
   wire [7:0]w7x_timing_0_state_led;
-  wire [7:0]xlconstant_0_dout;
 
   assign clk_1 = clk_in;
-  assign state0[7:0] = xlconstant_0_dout;
+  assign state0[7:0] = w7x_timing_0_state_led;
   assign state1[7:2] = w7x_timing_0_state_do;
   assign state_leds[7:0] = w7x_timing_0_state_led;
   assign trg_in_1 = trg_in;
@@ -732,8 +731,6 @@ module system
         .ena(w7x_timing_0_BRAM_PORTA_EN),
         .wea(w7x_timing_0_BRAM_PORTA_WE),
         .web(1'b0));
-  system_gnd_0 gnd
-       (.dout(xlconstant_0_dout));
   system_proc_sys7_0 proc_sys7
        (.CAN0_PHY_RX(1'b0),
         .DDR_Addr(DDR_addr[14:0]),

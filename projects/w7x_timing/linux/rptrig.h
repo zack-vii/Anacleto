@@ -30,10 +30,10 @@ typedef unsigned int		uint32_t;
 typedef unsigned long long	uint64_t;
 */
 
+# pragma pack(1) // manual packing aligned 64 bit
 typedef union
 {
-	usermem_t raw;
-# pragma pack(1) // manual packing aligned 64 bit
+	USERMEM(raw);
 	struct
 	{
 		uint8_t  r_status[MAX_STATUS];//0x00 ++0x01

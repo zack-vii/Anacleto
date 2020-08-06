@@ -42,9 +42,9 @@ ipx::add_port_map ADDR [ipx::get_bus_interfaces BRAM_PORTB -of_objects [ipx::cur
 set_property physical_name bram_addrb [ipx::get_port_maps ADDR -of_objects [ipx::get_bus_interfaces BRAM_PORTB -of_objects [ipx::current_core]]]
 
 
-# Set FREQ_HZ on s00_axi
-ipx::add_bus_parameter FREQ_HZ [ipx::get_bus_interfaces s00_axi -of_objects [ipx::current_core]]
-set_property value 250000000 [ipx::get_bus_parameters FREQ_HZ -of_objects [ipx::get_bus_interfaces s00_axi -of_objects [ipx::current_core]]]
+# Set clk_axi_in on s00_axi
+ipx::infer_bus_interface clk_axi_in xilinx.com:signal:clock_rtl:1.0 [ipx::current_core]
+ipx::associate_bus_interfaces -busif s00_axi -clock clk_axi_in [ipx::current_core]
 
 
 # Add MDD to SoftwareDriverGroup
