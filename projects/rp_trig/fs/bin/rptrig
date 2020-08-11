@@ -180,17 +180,17 @@ class rptrig(object):
         try: #create an AF_INET, STREAM socket (TCP)
             sock = _s.socket(_s.AF_INET, _s.SOCK_STREAM)
         except _s.error as msg:
-            print 'Failed to create socket (%d): %s'%(msg[0],msg[1])
+            print('Failed to create socket (%d): %s'%(msg[0],msg[1]))
             return
         try:
             sock.bind(('', int(port)))
         except _s.error as msg:
-            print 'Bind failed (%d): %s'%(msg[0],msg[1])
+            print('Bind failed (%d): %s'%(msg[0],msg[1]))
             return
         try:
             sock.listen(5)
         except _s.error as msg:
-            print 'Listen failed (%d): %s'%(msg[0],msg[1])
+            print('Listen failed (%d): %s'%(msg[0],msg[1]))
             return
         self.logger = rptrig.Logger(port+1,self)
         self.logger.start()
