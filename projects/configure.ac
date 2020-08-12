@@ -20,6 +20,9 @@ AX_CONFIG_FILES(
  rp_trig/Makefile
  rp_trig/linux/Makefile
 
+ rp_trig2/Makefile
+ rp_trig2/linux/Makefile
+
  usermem/Makefile
  usermem/linux/Makefile
  usermem/linux/Kbuild

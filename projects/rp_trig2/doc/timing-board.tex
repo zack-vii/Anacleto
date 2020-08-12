@@ -1,0 +1,229 @@
+% Some macros for logic timing diagrams.
+%
+% Author: ir. Pascal T. Wolkotte and Jochem Rutgers, University of Twente
+\documentclass{article}
+\usepackage{verbatim,calc,listings,lscape}
+\usepackage[margin=1cm]{geometry}
+\begin{comment}
+:Title: Timing diagram
+:Tags: Diagrams, Macro packages
+
+Uses ``timing.sty``, a convenient set of macros for drawing
+logic timing diagrams. Written by Pascal Wolkotte and Jochem Rutgers.
+
+The macros are also available as a separate sty file:
+
+- `timing.sty`_
+
+.. _timing.sty: /media/pgftikzexamples/circuits/timing.sty
+
+:Authors: ir. Pascal T. Wolkotte and Jochem Rutgers, University of Twente
+\end{comment}
+
+% Start of timing.sty
+
+% Some macros for logic timing diagrams.
+%
+% Author: ir. Pascal T. Wolkotte and Jochem Rutgers, University of Twente
+% Version: 0.1
+% Date: 2007/10/11
+\usepackage{tikz}
+\newcounter{wavenum}
+\setlength{\unitlength}{1pt}
+% advance clock one cycle, not to be called directly
+\newcommand*{\clki}{
+  \draw (t_cur) -- ++(0,.3) -- ++(.5,0) -- ++(0,-.6) -- ++(.5,0) -- ++(0,.3)
+    node[time] (t_cur) {};
+}
+\newcommand*{\bitvector}[3]{
+  \draw[fill=#3] (t_cur) -- ++( .1, .3) -- ++(#2-.2,0) -- ++(.1, -.3)
+                         -- ++(-.1,-.3) -- ++(.2-#2,0) -- cycle;
+  \path (t_cur) -- node[anchor=mid] {#1} ++(#2,0) node[time] (t_cur) {};
+}
+% \known{val}{length}
+\newcommand*{\known}[2]{
+    \bitvector{#1}{#2}{white}
+}
+% \unknown{length}
+\newcommand*{\unknown}[2][]{
+    \bitvector{#1}{#2}{black!20}
+}
+% \bit{1 or 0}{length}
+\newcommand*{\bit}[2]{
+  \draw (t_cur) -- ++(0,.6*#1-.3) -- ++(#2,0) -- ++(0,.3-.6*#1)
+    node[time] (t_cur) {};
+}
+% \unknownbit{length}
+\newcommand*{\unknownbit}[1]{
+  \draw[ultra thick,black!20] (t_cur) -- ++(#1,0) node[time] (t_cur) {...};
+}
+% \nextwave{name}
+\newcommand{\nextwave}[1]{
+  \path (0,\value{wavenum}) node[left] {#1} node[time] (t_cur) {};
+  \addtocounter{wavenum}{-1}
+}
+% \clk{name}{period}
+\newcommand{\clk}[2]{
+    \nextwave{#1}
+    \FPeval{\res}{(\wavewidth+1)/#2}
+    \FPeval{\reshalf}{#2/2}
+    \foreach \t in {1,2,...,\res}{
+        \bit{\reshalf}{1}
+        \bit{\reshalf}{0}
+    }
+}
+% \begin{wave}[clkname]{num_waves}{clock_cycles}
+\newenvironment{wave}{
+  \begin{tikzpicture}[draw=black, yscale=.7,xscale=.58]
+    \tikzstyle{time}=[coordinate]
+}{\end{tikzpicture}}
+% \begin{wave}[clkname]{num_waves}{clock_cycles}
+\newenvironment{wave2}[2][10MHz clk]{
+  \begin{wave}
+    \setcounter{wavenum}{0} 
+		\nextwave{#1}
+    \foreach \t in {-1,0,...,23}{
+      \draw[dotted] (t_cur) +(0,.5) node[above] {\t} -- ++(0,.4-#2);
+      \clki
+    }
+		\unknownbit{1}{1}
+		\foreach \t in {88,89,...,101}{
+      \draw[dotted] (t_cur) +(0,.5) node[above] {\t} -- ++(0,.4-3);
+      \clki
+    }
+}{\end{wave}}
+%%% End of timing.sty
+
+\begin{document}
+\thispagestyle{empty}
+\part*{\center RedPitaya - Timing Module}
+\section*{Firmware}
+\subsection*{Data types}
+Definition: \textit{boolean} = 1bit logical, \textit{int} = 4byte integer, \textit{long} = 8byte integer.\\
+Using \textit{int} as data type for DELAY and TIMES limits the maximal duration to little more than 3.5 minutes. Considering quasi continuous pulses, \textit{long} is used.
+Since some diagnostics require arbitrarily distributed clocks the maximum number of elements the Sequence vector is maxed out to hardware constrains of the FPGA ($54272$ @ $40$bit).
+\subsection*{private parameters - registers}
+\begin{tabular}{llll}
+address&name&type&description\\\hline
+0x0000&STATUS[8]&byte&Status register stores debug and state information of the FPGA.\\
+0x0008&INIT&bool&Used to arm the device or abort an executed program.\\
+0x0009&TRIG&bool&Used to software trigger the device.\\
+0x000A&CLEAR&bool&Used to clear error from the status register.\\
+0x000B&REINIT&bool&Set if device in reinit mode.\\
+0x000C&SAVE&bool&Used to set up reinit mode.\\
+0x000D&EXTCLK&bool&Controls clock source: 0:internal (10Mhz), 1:external.\\
+0x000E&INVERT&byte&Stores bit information of channels that are set for inverted output.\\
+0x000F&GATE&byte&Stores bit information of channels that are set for gate mode.\\
+0x0010&DELAY&long&Number of tick between the input trigger and the beginning of the first sequence.\\
+0x0018&WIDTH&int&Number of ticks the output remains high after raised.\\
+0x0020&PERIOD&int&Minimum number of ticks between two raising edges:\\
+&&& 1. defines the rate of the pulse train.\\
+&&& 2. defines when the gate closes after the last pulse.\\
+0x0028&BURST&long&Number of pulses in a pulse train.\\
+0x0030&CYCLE&long&Total number of ticks before the cycle repeats.\\
+0x0038&REPEAT&int&Number of cycle repetitions.\\
+0x003C&COUNT&int&Number of pulse trains in a sequence.\\
+0x0040&TIMES&long[]&Increasing tick counts since cycle beginning to raising edge of the first pulse in a train.\\
+\end{tabular}
+
+\subsubsection*{LED and DIO connections}
+	\begin{tabular}[t]{l||cc|cc|cc|cc|cc|cc|cc|cc}
+		ribbon & {\color{red}$0$} & $1$  & $2$  & $3$  & $4$  & $5$ & $6$ & $7$ & $8$  & $9$  & $10$  & $11$  & $12$ & $13$ & $14$ & $15$ \\\hline
+		bank &\multicolumn{2}{c|}{$0$}  & \multicolumn{2}{c|}{$1$}  & \multicolumn{2}{c|}{$2$}  & \multicolumn{2}{c|}{$3$}  & \multicolumn{2}{c|}{$4$}  & \multicolumn{2}{c|}{$5$} & \multicolumn{2}{c|}{$6$} & \multicolumn{2}{c}{$7$} \\\hline
+		led  & \multicolumn{2}{c|}{\textit{trigger}}  & \multicolumn{2}{c|}{clock}  & \multicolumn{2}{c|}{signal}  & \multicolumn{2}{c|}{gate}  & \multicolumn{2}{c|}{armed}  & \multicolumn{2}{c|}{reinit} & \multicolumn{2}{c|}{ext\_clk} & \multicolumn{2}{c}{error} \\\hline
+		p(inner) & \textbf{trig} && \textbf{clk} && ch0 && ch1 && ch2 && ch3 && ch4 && ch5 \\\hline
+		n(outer) && \textbf{gnd} && \textbf{gnd} && gnd && gnd && gnd && gnd && gnd && gnd  \\
+	\end{tabular}	\\\textbf{input}, output, \textit{inverted}\\
+
+Channels ch0-ch5 can be inverted or switched to gate mode using the invert() and gate() method, respectively. 
+
+\subsubsection*{Parameter contrains/defaults}
+These constrains should be checked against by the driver before programming.\\
+\begin{tabular}{llll}
+name  &constrain&default&default*\\\hline
+DELAY &$\geq0$&$0$&$60,000,000$\\
+WIDTH &$\geq1$&$\rm{WIDTH}/2$&$5$\\
+PERIOD&$>\rm{WIDTH}$&$10$&$10$\\
+BURST&$\geq0$&$1$&$0$\\
+CYCLE &$\geq\rm{COUNT}*\rm{PERIOD}*\rm{BURST}$&$\rm{COUNT}*\rm{PERIOD}*\rm{BURST}$&$0$\\
+&$\geq\rm{TIMES[end]}+\rm{PERIOD}*\rm{BURST}$&$\rm{TIMES[end]}+\rm{PERIOD}*\rm{BURST}$&-\\
+REPEAT&$\geq0$&$1$&$0$\\
+COUNT &$\geq0$&$1$&$1$\\
+ &$\geq0,\quad \leq \rm{len}(\rm{TIMES})$&$\rm{len}(\rm{TIMES})$&-\\
+\end{tabular}
+
+*) default value if nothing or only DELAY is provided, only valid for makeClock.
+
+The remote programming is currently available via mdsip with provided tdi functions.
+
+\subsection*{Methods (public methods)}
+\subsubsection*{makeClock (method = 'C')}
+The parameters DELAY, WIDTH, PERIOD, BURST, CYCLE, and REPEAT are transmitted. TIMES defaults to [0].
+\subsubsection*{makeSequence (method = 'S')}
+The parameters DELAY, WIDTH, PERIOD, BURST, CYCLE, REPEAT, COUNT, and TIMES are transmitted.
+\subsubsection*{arm (method = 'A')}
+INIT is set. This will cause the program to react on trig events.
+\subsubsection*{disarm (method = 'D')}
+INIT is cleared. This will interrupt the program if running. The device is idling until the next init.
+\subsubsection*{trig (method = 'T')}
+TRIG is set and if armed the device will start the program, i.e. software trigger.
+\subsubsection*{reinit (method = 'R')}
+REINIT mode is set up (>=0) or deactivated (-1/None).
+\subsubsection*{disarm (method = 'E')}
+EXT\_CLK is configured. This selects between internal 10MHz (0) and external (1) clock.
+\subsubsection*{gate (method = 'G')}
+GATE is configured as bit register controlling the output channels whether to be in signal (0) or gate (1) mode.
+\subsubsection*{invert (method = 'I')}
+INVERT is configured as bit register controlling the output channels whether to be in normal (0) or inverted (1) mode.
+\subsubsection*{state (method = 's')}
+Requests the current state of the device.
+\subsubsection*{params (method = 'p')}
+Requests the parameters the device is  currently configured with.
+\subsubsection*{error (method = 'e')}
+Requests the error/message string. 
+
+\subsection*{Timing}
+The board cycle can be synchronized to an external clock or will use its internal $10$Mhz clock.
+The jitter is minimal. The timestamps of the TTLs can be calculate with little uncertainty based on the clock. The uncertainty is mainly influenced by the quality of edge of the pulse.
+
+\subsection*{Trigger schema in reinit mode}
+At W7X there will be a trigger $T_0=-60$s before the experiment starts at $T_1=0$s. This trigger will engage the initialization of all diagnostics as well as the timing module. In order to supports output signals even seconds before $T_1$ it is required to trigger the timing module with $T_0$. In reinit mode the triggered module enters the delay phase set to $60$s. During the delay phase the module accepts a reconfiguration (makeClock, makeSequence) without loosing track of the tick count with respect to $T_0$. The updated delay and timing configuration are used for the rest of the program. If the device is not configured before the end of delay, it returns to armed state without generating any pulse.
+
+\clearpage\thispagestyle{empty}
+\begin{landscape}
+\part*{\center Timing}
+\section*{Program}
+A program contains the list of strictly monotonic increasing tick counts relative to the trigger input for all pulses that will be generated when a trigger arrives. It is the lowest level of control. A program can be compiled as a initial $\mathrm{DELAY}$ and $\mathrm{REPEAT}$ identical, subsequent cycles.
+
+\begin{wave}
+ \nextwave{trigger\_in} \bit{0}{1}\bit{1}{1}\bit{0}{38}
+\textbf{ \nextwave{program}\unknown{1}\known{program}{36}\unknown{3}
+}
+ \nextwave{delay}\unknown{1} \known{delay}{5}\unknown{34}
+ \nextwave{N cycles}\unknown{6}\known{1st cycle}{10}\known{2nd cycle}{10}\unknownbit{1}\known{N-th cycle}{10}\unknown{3}
+ \nextwave{sequence}\unknown{6}\known{1st sequence}{5}\unknown{5}\known{2nd sequence}{5}\unknown{5}\unknownbit{1}\known{N-th sequence}{5}\unknown{8}
+\end{wave}
+
+\section*{Cycle}
+During every cycle a digital signal is generated. A gate signal will be high during the sequence and low during idle time. The duration of one cycle is defined by $\mathrm{CYCLE}$ and controls the repetition rate.
+\subsection*{Sequence ($\mathrm{WIDTH}=2,\mathrm{PERIOD}=5,\mathrm{TIMES}=\left[3,8,14,21,\cdots,92,96\right]$), makeSequence}
+The digital signal is generated as a sequence of pulses of a given $\mathrm{WIDTH}$.
+The timing of the pulses is defined by $\mathrm{TIMES}$ that contains tick counts relative to the beginning of the cycle. The low-high transition of the gate is defined by the beginning of the cycle. The high-low transition is defined by the last element of $\mathrm{TIMES}$ plus $\mathrm{PERIOD}$.
+
+
+\begin{wave2}{3}
+ \nextwave{signal}\bit{0}{4} \bit{1}{2} \bit{0}{3} \bit{1}{2} \bit{0}{4}\bit{1}{2}\bit{0}{5}\bit{1}{2}\bit{0}{1}\unknownbit{1}\bit{0}{4}\bit{1}{2}\bit{0}{2}\bit{1}{2}\bit{0}{4}
+ \nextwave{gate}\bit{0}{1} \bit{1}{38}\bit{0}{1}
+\end{wave2}
+
+\subsection*{Pulse train ($\mathrm{WIDTH}=3,\mathrm{PERIOD}=10,\mathrm{BURST}=10$), makeClock}
+In pulse train mode the parameter $\mathrm{PERIOD}$ and $\mathrm{BURST}$ are used generate a sequence of equidistant pulses.\hfill
+$\mathrm{TIMES} = [0]$
+
+
+\begin{wave2}{3}
+ \nextwave{signal} \bit{0}{1}\bit{1}{3} \bit{0}{7} \bit{1}{3} \bit{0}{7}\bit{1}{3}\bit{0}{1}\unknownbit{1}\bit{0}{2}\bit{1}{3}\bit{0}{9}
+ \nextwave{gate} \bit{0}{1}\bit{1}{37}\bit{0}{2}
+\end{wave2}
+\end{landscape}
+\end{document}
