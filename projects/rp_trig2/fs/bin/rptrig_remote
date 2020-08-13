@@ -87,10 +87,10 @@ class remote(object):
         return self._exchange_str(remote._makeMsg(b'E','<b',1,1 if value else 0))
     def gate(self,val=0):
         return self._exchange_str(remote._makeMsg(b'G','<B',1,self._tobyte(val)))
-    def gate2(self,val=0):
-        return self._exchange_str(remote._makeMsg(b'H','<B',1,self._tobyte(val)))
     def invert(self,val=0):
         return self._exchange_str(remote._makeMsg(b'I','<B',1,self._tobyte(val)))
+    def debug(self,val=0):
+        return self._exchange_str(remote._makeMsg(b'd','<B',1,val))
     @property
     def state(self):
         return self._exchange(remote._makeMsg(b's','',0),'<B',1)[0]
@@ -138,7 +138,7 @@ class Test(_u.TestCase):
         self.dev.disarm();
         self.assertEqual(self.dev.state,STATE_IDLE[1])
         self.dev.gate([2,4])
-        self.dev.gate2([5])
+        # self.dev.debug(5)
         self.dev.invert([3,4])
         self.dev.makeClock(cycle=1000000,burst=1000,repeat=5)
         self.assertEqual(self.dev.error.strip(),"MAKE CLOCK: DELAY: 0, WIDTH: 5, PERIOD: 10, BURST: 1000, CYCLE: 1000000, REPEAT: 5, COUNT: 1")

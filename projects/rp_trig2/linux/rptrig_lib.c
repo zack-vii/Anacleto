@@ -366,10 +366,10 @@ int PREFIX(SetGate)(uint8_t val)
 	return C_OK;
 }
 
-int PREFIX(SetGate2)(uint8_t val)
+int PREFIX(SetDebug)(uint8_t val)
 {
 	INIT_DEVICE
-	dev->w_gate2 = val;
+	dev->w_debug = val;
 	return C_OK;
 }
 

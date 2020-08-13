@@ -9,9 +9,9 @@
 set_property IOSTANDARD LVCMOS33 [get_ports {trg_in clk_in}]
 set_property PULLDOWN true       [get_ports {trg_in clk_in}]
 # out
-set_property IOSTANDARD LVCMOS33 [get_ports {state0[*] trg_out clk_out clk_int_out gate_out state_leds[*]}]
-set_property SLEW FAST           [get_ports {state0[*] trg_out clk_out clk_int_out gate_out state_leds[*]}]
-set_property DRIVE 8             [get_ports {state0[*] trg_out clk_out clk_int_out gate_out              }]
+set_property IOSTANDARD LVCMOS33 [get_ports {state0[*] trg_out clk_out clk_int_out active_out state_leds[*]}]
+set_property SLEW FAST           [get_ports {state0[*] trg_out clk_out clk_int_out active_out state_leds[*]}]
+set_property DRIVE 8             [get_ports {state0[*] trg_out clk_out clk_int_out active_out              }]
 set_property DRIVE 4             [get_ports {                                               state_leds[*]}]
 #DIO0-7_P
 set_property PACKAGE_PIN G17 [get_ports trg_in]
@@ -19,7 +19,7 @@ set_property PACKAGE_PIN H16 [get_ports trg_out]
 set_property PACKAGE_PIN J18 [get_ports clk_in]
 set_property PACKAGE_PIN K17 [get_ports clk_int_out]
 set_property PACKAGE_PIN L14 [get_ports clk_out]
-set_property PACKAGE_PIN L16 [get_ports gate_out]
+set_property PACKAGE_PIN L16 [get_ports active_out]
 #set_property PACKAGE_PIN K16 [get_ports pin6]
 #set_property PACKAGE_PIN M14 [get_ports pin7]
 #DIO0-7_N

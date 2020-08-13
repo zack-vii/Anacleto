@@ -51,7 +51,7 @@ typedef union
 				uint8_t	w_extclk;
 				uint8_t	w_invert;
 				uint8_t	w_gate;
-				uint8_t	w_gate2;
+				uint8_t	w_debug;
 			};
 		};
 		union {

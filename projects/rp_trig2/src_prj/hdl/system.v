@@ -1,7 +1,7 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Thu Aug 13 07:34:37 2020
+//Date        : Thu Aug 13 11:47:29 2020
 //Host        : mds-data-2 running 64-bit unknown
 //Command     : generate_target system.bd
 //Design      : system
@@ -521,10 +521,10 @@ module system
     FIXED_IO_ps_clk,
     FIXED_IO_ps_porb,
     FIXED_IO_ps_srstb,
+    active_out,
     clk_in,
     clk_int_out,
     clk_out,
-    gate_out,
     state0,
     state_leds,
     trg_in,
@@ -550,10 +550,10 @@ module system
   inout FIXED_IO_ps_clk;
   inout FIXED_IO_ps_porb;
   inout FIXED_IO_ps_srstb;
+  output active_out;
   input clk_in;
   output clk_int_out;
   output clk_out;
-  output gate_out;
   output [7:0]state0;
   output [7:0]state_leds;
   input trg_in;
@@ -659,10 +659,10 @@ module system
   wire [7:0]trig_state_out;
   wire trig_trg_out;
 
+  assign active_out = trig_gate_out;
   assign clk_1 = clk_in;
   assign clk_int_out = clk_wiz_0_clk_out1;
   assign clk_out = trig_clk_out;
-  assign gate_out = trig_gate_out;
   assign state0[7:0] = trig_signal_out;
   assign state_leds[7:0] = trig_state_out;
   assign trg_in_1 = trg_in;
@@ -826,7 +826,8 @@ module system
         .peripheral_aresetn(proc_sys_reset_peripheral_aresetn),
         .slowest_sync_clk(proc_sys7_FCLK_CLK0));
   system_trig_0 trig
-       (.bram_addra(rp_trig_0_BRAM_PORTA_ADDR),
+       (.active_out(trig_gate_out),
+        .bram_addra(rp_trig_0_BRAM_PORTA_ADDR),
         .bram_addrb(rp_trig_0_BRAM_PORTB_ADDR),
         .bram_clka(rp_trig_0_BRAM_PORTA_CLK),
         .bram_clkb(rp_trig_0_BRAM_PORTB_CLK),
@@ -838,7 +839,6 @@ module system
         .clk_ext_in(clk_1),
         .clk_int_in(clk_wiz_0_clk_out1),
         .clk_out(trig_clk_out),
-        .gate_out(trig_gate_out),
         .power_down(trig_power_down),
         .s00_axi_araddr(proc_sys7_axi_periph_M00_AXI_ARADDR[18:0]),
         .s00_axi_arprot(proc_sys7_axi_periph_M00_AXI_ARPROT),

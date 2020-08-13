@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<bd:repository xmlns:bd="http://www.xilinx.com/bd" bd:BoundaryCRC="0xDB4BD284EE00F736" bd:device="xc7z010clg400-1" bd:isValidated="true" bd:synthFlowMode="None" bd:tool_version="2017.2" bd:top="system" bd:version="1.00.a">
+<bd:repository xmlns:bd="http://www.xilinx.com/bd" bd:BoundaryCRC="0x983C5AB02AE9405E" bd:device="xc7z010clg400-1" bd:isValidated="true" bd:synthFlowMode="None" bd:tool_version="2017.2" bd:top="system" bd:version="1.00.a">
 
   <spirit:component xmlns:spirit="http://www.spiritconsortium.org/XMLSchema/SPIRIT/1685-2009">
     <spirit:vendor>xilinx.com</spirit:vendor>
@@ -187,7 +187,7 @@
           </spirit:wire>
         </spirit:port>
         <spirit:port>
-          <spirit:name>gate_out</spirit:name>
+          <spirit:name>active_out</spirit:name>
           <spirit:wire>
             <spirit:direction>out</spirit:direction>
           </spirit:wire>
@@ -845,7 +845,7 @@
           <spirit:configurableElementValue spirit:referenceId="CLKOUT6_DRIVES">BUFGCE</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="CLKOUT7_DRIVES">BUFGCE</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="FEEDBACK_SOURCE">FDBK_AUTO</spirit:configurableElementValue>
-          <spirit:configurableElementValue spirit:referenceId="USE_LOCKED">true</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="USE_LOCKED">false</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="USE_POWER_DOWN">true</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="RESET_PORT">resetn</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="MMCM_DIVCLK_DIVIDE">5</spirit:configurableElementValue>
@@ -959,8 +959,8 @@
       </spirit:adHocConnection>
       <spirit:adHocConnection>
         <spirit:name>trig_gate_out</spirit:name>
-        <spirit:internalPortReference spirit:componentRef="trig" spirit:portRef="gate_out"/>
-        <spirit:externalPortReference spirit:portRef="gate_out"/>
+        <spirit:internalPortReference spirit:componentRef="trig" spirit:portRef="active_out"/>
+        <spirit:externalPortReference spirit:portRef="active_out"/>
       </spirit:adHocConnection>
       <spirit:adHocConnection>
         <spirit:name>trig_state_out</spirit:name>
