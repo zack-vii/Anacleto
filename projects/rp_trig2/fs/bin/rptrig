@@ -3,6 +3,7 @@ import ctypes
 import numpy
 import socket
 import struct
+import time
 import threading
 import unittest
 
@@ -15,7 +16,7 @@ INIT_REARM = 7
 INIT_REINIT = 15
 
 MAX_STATUS = 8
-MAX_SAMPLES = 54272
+MAX_SAMPLES = 45000
 
 TIME_MASK = (1 << TIME_WIDTH) - 1
 
@@ -26,6 +27,7 @@ STATE_CH3 = 8
 STATE_IDLE = 16
 STATE_ARMED = 32
 STATE_ACTIVE = 64
+STATE_NOTWAIT = STATE_IDLE | STATE_ARMED | STATE_ACTIVE
 STATE_CLK = 128
 
 
@@ -141,14 +143,15 @@ class rptrig(object):
             self._error = ctypes.cast(
                     self.cdll.RPTRIG_GetError(), ctypes.c_char_p)
             self.dev = struct_rptrig(self)
-            self.tryExt()
+            self.try_extclk()
         except OSError as exc:
             print('rptrig: ' + str(exc))
             raise
 
-    def tryExt(self):
+    def try_extclk(self):
         from time import sleep
         self.extclk(0)
+        self.debug(0)
         self.disarm()
         if not self.state & STATE_IDLE:
             print("Internal clock not idle?")
@@ -162,8 +165,11 @@ class rptrig(object):
         return hasext
 
     @property
+    def statusx(self): return self.dev.device.statusx[:]
+
+    @property
     def status(self):
-        status = self.dev.device.statusx[:]
+        status = self.statusx
         index = status[0]
         time = status[1] & TIME_MASK
         mask = status[1] >> TIME_WIDTH
@@ -181,16 +187,16 @@ class rptrig(object):
     def disarm(self):
         self.cdll.RPTRIG_Disarm()
 
-    def makeClock(self,
-                  delay=None, width=None, period=None,
-                  burst=None, cycle=None, repeat=None):
+    def make_clock(
+            self, delay=None, width=None, period=None,
+            burst=None, cycle=None, repeat=None):
         args = rptrig._toctypes(delay, width, period, burst, cycle, repeat)
         delay, width, period, burst, cycle, repeat = rptrig._byref(*args)
         self.cdll.RPTRIG_MakeClock(delay, width, period, burst, cycle, repeat)
 
-    def makeSequence(self,
-                     delay=None, width=None, period=None,
-                     burst=None, cycle=None, repeat=None, times=(), mask=()):
+    def make_sequence(
+            self, delay=None, width=None, period=None,
+            burst=None, cycle=None, repeat=None, times=(), mask=()):
         mask = numpy.array(
                 [(m & 0xFF) << TIME_WIDTH for m in mask or [255]],
                 dtype=numpy.uint64)
@@ -200,14 +206,20 @@ class rptrig(object):
             mask = numpy.pad(mask, (0, topad), 'wrap')
         elif topad < 0:
             mask = mask[:lentimes]
-        times = numpy.ascontiguousarray(times, dtype=numpy.uint64) & TIME_MASK
-        times |= mask
-        timref = times.ctypes.data_as(ctypes.POINTER(ctypes.c_uint64))
+        times = numpy.ascontiguousarray(
+                times or [0], dtype=numpy.uint64) & TIME_MASK
+        return self._make_sequence(
+            delay, width, period, burst, cycle, repeat, times | mask)
+
+    def _make_sequence(
+            self, delay=None, width=None, period=None,
+            burst=None, cycle=None, repeat=None, data=()):
+        dataref = data.ctypes.data_as(ctypes.POINTER(ctypes.c_uint64))
         buf = rptrig._toctypes(
-            delay, width, period, burst, cycle, repeat, lentimes)
+            delay, width, period, burst, cycle, repeat, len(data))
         delay, width, period, burst, cycle, repeat, count = rptrig._byref(*buf)
         self.cdll.RPTRIG_MakeSequence(
-            delay, width, period, burst, cycle, repeat, count, timref)
+            delay, width, period, burst, cycle, repeat, count, dataref)
 
     def reinit(self, delay=None):
         delay = None if delay is None else ctypes.c_uint64(int(delay))
@@ -254,6 +266,7 @@ class rptrig(object):
     def run(self, port):
         try:  # create an AF_INET, STREAM socket (TCP)
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         except socket.error as msg:
             print('Failed to create socket (%d): %s' % (msg[0], msg[1]))
             return
@@ -289,7 +302,7 @@ class rptrig(object):
         _set = set()
 
         def __init__(self, conn, addr, iface):
-            super(rptrig.Handler, self).__init__(name='%s:%d' & addr)
+            super(rptrig.Handler, self).__init__(name='%s:%d' % addr)
             conn.settimeout(10)
             self.conn = conn
             self.iface = iface
@@ -309,12 +322,14 @@ class rptrig(object):
                 print('%s : Connection established' % self.name)
                 while not self._stop:
                     try:
+                        cmd = "Waiting for command"
                         head = self.conn.recv(7)
                         with rptrig._lock:
                             if not head.startswith('RPT'):
                                 if len(head) > 0:
                                     raise Exception(
                                         'Invalid header "%s"' % (head, ))
+                                    self.conn.send("ERR: Invalid command.")
                                 raise Exception('Connection closed')
                             length = struct.unpack('<L', head[3:])[0]
                             remaining = length+1
@@ -325,48 +340,74 @@ class rptrig(object):
                             cmd = ''.join(cmd)
                             cmd, param = cmd[0], cmd[1:]
                             if cmd == 'C':
-                                param = tuple((None if p<0 else p) for p in struct.unpack('<qqqqql', param[:44]))
-                                self.iface.makeClock(*param)
+                                param = tuple(
+                                    (None if p < 0 else p)
+                                    for p in struct.unpack('<6q', param[:48])
+                                )
+                                self.iface.make_clock(*param)
                             elif cmd == 'S':
-                                args = tuple((None if p<0 else p) for p in struct.unpack('<qqqqql', param[:44]))
-                                times = numpy.fromstring(param[44:length], numpy.uint64)
-                                self.iface.makeSequence(*args, times=times)
+                                args = tuple(
+                                    (None if p < 0 else p)
+                                    for p in struct.unpack('<6q', param[:48])
+                                )
+                                data = numpy.fromstring(
+                                        param[48:length], numpy.uint64)
+                                self.iface._make_sequence(*args, data=data)
                             elif cmd == 'A':
                                 self.iface.arm()
                             elif cmd == 'R':
                                 self.iface.rearm()
                             elif cmd == 'X':
-                                self.iface.reinit([(None if p<0 else p) for p in struct.unpack('<q', param[:8])][0])
+                                self.iface.reinit([
+                                    (None if p < 0 else p)
+                                    for p in struct.unpack('<q', param[:8])
+                                ][0])
                             elif cmd == 'D':
                                 self.iface.disarm()
                             elif cmd == 'T':
                                 self.iface.trig()
                             elif cmd == 'E':
-                                self.iface.extclk(struct.unpack('<B', param[0])[0])
+                                self.iface.extclk(
+                                        struct.unpack('<B', param[0])[0])
                             elif cmd == 'G':
-                                self.iface.gate(struct.unpack('<B', param[0])[0])
+                                self.iface.gate(
+                                        struct.unpack('<B', param[0])[0])
                             elif cmd == 'I':
-                                self.iface.invert(struct.unpack('<B', param[0])[0])
+                                self.iface.invert(
+                                        struct.unpack('<B', param[0])[0])
                             elif cmd == 'd':
-                                self.iface.debug(struct.unpack('<B', param[0])[0])
+                                self.iface.debug(
+                                        struct.unpack('<B', param[0])[0])
                             elif cmd == 'c':
-                                self.conn.send(struct.pack('<BBBBBBBB', *self.iface.dev.control))
+                                self.conn.send(struct.pack(
+                                    '<8B', *self.iface.dev.control))
+                                continue
+                            elif cmd == 't':
+                                self.conn.send(struct.pack(
+                                    '<B', int(self.iface.try_extclk())))
                                 continue
                             elif cmd == 's':
-                                self.conn.send(struct.pack('<B', self.iface.state))
+                                self.conn.send(struct.pack(
+                                    '<B', self.iface.state))
+                                continue
+                            elif cmd == 'x':
+                                self.conn.send(struct.pack(
+                                    '<7Q', *self.iface.statusx))
                                 continue
                             elif cmd == 'p':
-                                self.conn.send(struct.pack('<qqqqqll', *self.iface.params))
+                                self.conn.send(struct.pack(
+                                    '<6ql', *self.iface.params))
                                 continue
                             elif cmd == 'e':
                                 pass  # only return error
                             else:
-                                raise Exception('Invalid command "%s"' % (cmd, ))
+                                raise Exception(
+                                        'Invalid command "%s"' % (cmd, ))
                             self.senderror()
                     except KeyboardInterrupt:
                         raise
                     except Exception as e:
-                        print('%s : %s' % (self.name, str(e)))
+                        print('%s : %s - %s' % (self.name, cmd, str(e)))
                         break
             finally:
                 self.conn.close()
@@ -377,33 +418,100 @@ class rptrig(object):
 
 # UNIT TEST
 class Test(unittest.TestCase):
-    def local(self):
-        from time import sleep
-        dev = rptrig()
-        dev.disarm()
-        dev.reinit()
-        sleep(.1)
-        dev.disarm()
-        dev.makeClock(cycle=10000000, burst=1000, repeat=5)
-        self.assertEqual(dev.params, (0, 5, 10, 1000, 10000000, 5, 1))
-        dev.makeSequence(1e6, 5, 10, 100, 1e6, 3, [0, 2e4, 4e4, 5e4, 7e4, 1e5])
-        dev.gate([2, 4])
-        # dev.debug([5])
-        dev.invert([3, 4])
-        dev.arm()
-        dev.rearm()
-        dev.trig()
-        sleep(1)
-        dev.disarm()
+    @classmethod
+    def setUpClass(cls):
+        cls.dev = rptrig()
+        cls.dev.arm()
+        cls.dev.disarm()
+        time.sleep(.001)
+        if cls.dev.try_extclk():
+            print("test using external clock.")
+            cls.dev.extclk(1)
+
+    def default(self):
+        self.dev.disarm()
+        self.dev.make_clock()
+        self.assertEqual(self.dev.params, (0, 5, 10, 1, 10, 1, 1))
+
+    def arm(self):
+        self.dev.disarm()
+        self.assertTrue(self.dev.state & STATE_IDLE)
+        self.dev.gate([2, 4])
+        self.dev.invert([3, 4])
+        self.dev.make_clock(cycle=1000000, burst=1000, repeat=5)
+        self.assertEqual(self.dev.params, (0, 5, 10, 1000, 1000000, 5, 1))
+        self.dev.make_sequence(
+                1e6, 1e3, 2e3, 10, 3e6, 3, [0, 1e5, 2e5])
+        self.assertEqual(
+            self.dev.params, (1000000, 1000, 2000, 10, 3000000, 3, 3))
+        self.dev.arm()
+        self.assertTrue(self.dev.state & STATE_ARMED)
+        self.dev.trig()
+        time.sleep(.05)
+        for i in range(3):
+            self.assertFalse(self.dev.state & STATE_NOTWAIT)
+            time.sleep(.1)
+            self.assertTrue(self.dev.state & STATE_ACTIVE)  # HIGH
+            time.sleep(.1)
+            self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
+            time.sleep(.1)
+        self.assertTrue(self.dev.state & STATE_IDLE)
+
+    def rearm(self):
+        self.dev.disarm()
+        self.assertTrue(self.dev.state & STATE_IDLE)
+        self.dev.rearm()
+        self.dev.make_clock(delay=1500000, width=1000000)
+        self.assertEqual(
+                self.dev.params, (1500000, 1000000, 2000000, 1, 2000000, 1, 1))
+        self.assertTrue(self.dev.state & STATE_ARMED)
+        self.dev.trig()
+        time.sleep(.1)
+        self.assertFalse(self.dev.state & STATE_NOTWAIT)
+        time.sleep(.1)
+        self.assertTrue(self.dev.state & STATE_ACTIVE)  # HIGH
+        time.sleep(.1)
+        self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
+        time.sleep(.1)
+        self.assertTrue(self.dev.state & STATE_ARMED)
+        self.assertEqual(
+            self.dev.params, (1500000, 1000000, 2000000, 1, 2000000, 1, 1))
+
+    def reinit(self):
+        self.dev.disarm()
+        self.assertTrue(self.dev.state & STATE_IDLE)
+        self.dev.reinit()
+        self.assertTrue(self.dev.state & STATE_ARMED)
+        self.dev.trig()
+        p = self.dev.params
+        self.assertEqual((p[0], p[3:6]), (600000000, (0, 0, 0)))
+        time.sleep(.1)
+        self.assertFalse(self.dev.state & STATE_NOTWAIT)
+        self.dev.make_clock(delay=1500000, width=1000000)
+        self.assertEqual(
+                self.dev.params, (1500000, 1000000, 2000000, 1, 2000000, 1, 1))
+        time.sleep(.1)
+        self.assertTrue(self.dev.state & STATE_ACTIVE)  # HIGH
+        time.sleep(.1)
+        self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
+        time.sleep(.1)
+        self.assertTrue(self.dev.state & STATE_ARMED)
+        p = self.dev.params
+        self.assertEqual((p[0], p[3:6]), (600000000, (0, 0, 0)))
 
     def runTest(self):
-        self.local()
+        for test in self.tests:
+            self.__getattr__(test)()
+
+    tests = ('default', 'arm', 'rearm', 'reinit')
+    @classmethod
+    def getTests(cls): return tuple(map(cls, Test.tests))
 
 
-def test():
+def test(host=None):
     import os
-    suite = unittest.TestSuite((Test('local'), ))
-    tr = unittest.TextTestRunner(stream=os.sys.stderr)
+    suite = unittest.TestSuite(Test.getTests())
+    tr = unittest.TextTestRunner(stream=os.sys.stderr, verbosity=2)
     tr.run(suite)
 
 
