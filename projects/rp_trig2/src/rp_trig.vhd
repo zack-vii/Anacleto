@@ -34,6 +34,8 @@ entity rp_trig is
         bram_clkb  : out  STD_LOGIC;
         bram_doutb : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
         bram_rstb  : out  STD_LOGIC;
+        bram_web   : out  STD_LOGIC;
+        bram_enb   : out  STD_LOGIC;
         -- Ports of Axi Slave Bus Interface S00_AXI
         s00_axi_resetn  : in  std_logic;
         s00_axi_awaddr  : in  std_logic_vector(ADDR_WIDTH+DATA_WIDTH/32 downto 0);
@@ -114,9 +116,9 @@ architecture arch_imp of rp_trig is
             clear_in   : in  STD_LOGIC;
             gate_in    : in  STD_LOGIC_VECTOR(7 downto 0);
             invert_in  : in  STD_LOGIC_VECTOR(7 downto 0);
-            mask_in    : in  STD_LOGIC_VECTOR(7 downto 0);
             head_in    : in  STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
-            time_in    : in  STD_LOGIC_VECTOR(TIME_WIDTH-1 downto 0);
+            time_in    : in  UNSIGNED(TIME_WIDTH-1 downto 0);
+            mask_in    : in  STD_LOGIC_VECTOR(7 downto 0);
             idle_out   : out STD_LOGIC;
             armed_out  : out STD_LOGIC;
             active_out : out STD_LOGIC;
@@ -153,11 +155,18 @@ architecture arch_imp of rp_trig is
     signal m_strb   : std_logic_vector((DATA_WIDTH/8)-1 downto 0);
     signal s_addr   : unsigned(ADDR_WIDTH-1 downto 0);
 
+    signal time_buf : unsigned(BRAM_WIDTH-9 downto 0);
+    signal mask_buf : std_logic_vector(7 downto 0);
+        
     signal signals  : std_logic_vector(7 downto 0);
     signal state    : std_logic_vector(STAT_COUNT*DATA_WIDTH-1 downto 0);
     signal head_save: std_logic_vector(HEAD_COUNT*DATA_WIDTH-1 downto 0) := (others => '0');
 
     signal clkbuf   : std_logic_vector(0 to INT_CLK_EXP+31) := (others => '0');
+
+    signal clk_div  : integer;
+    signal clk_sel  : boolean;
+    
     signal clk      : std_logic;
     signal trg      : std_logic;
     signal data_buf : std_logic_vector(HEAD_HEAD               downto 0) := (others => '0');
@@ -204,15 +213,14 @@ begin
     begin
         if rising_edge(clk_axi_in)
         then
-            if c_extclk = '1'
-            then clock := clk_ext_in;
-            else clock := clkbuf(to_integer(unsigned(cc_debug))+INT_CLK_EXP);
-            end if;
-            clk <= clock;
-            clk_out <= clock;
+            clk_sel <= c_extclk = '1';
+            clk_div <= to_integer(unsigned(cc_debug))+INT_CLK_EXP;
         end if;
     end process;
     
+    clk <= clk_ext_in when clk_sel else clkbuf(clk_div);
+    clk_out <= clk_ext_in when clk_sel else clkbuf(clk_div);
+   
     trigger : process(clk_axi_in, c_trig, trg_in)
         variable trigger : std_logic;
     begin
@@ -235,7 +243,7 @@ begin
     bram_rsta <= '0';
     bram_addra <= std_logic_vector(m_addr-offset);
     
-    bram_update : process(clk_axi_in,m_strb,m_wdata,bram_douta)
+    bram_update : process(clk_axi_in, m_strb, m_wdata, bram_douta)
     begin
         if rising_edge(clk_axi_in)
         then
@@ -257,8 +265,9 @@ begin
     
     -- b channel
     bram_rstb <= '0';
-    bram_clkb <= clk;
+    bram_clkb <= clk_axi_in;
     bram_addrb <= std_logic_vector(s_addr);
+    bram_enb <= '1';
     
     -- DATA_BUF
     update_buffer : process(clk_axi_in,
@@ -300,6 +309,9 @@ begin
             end if;
         end if;
     end process update_buffer;
+
+    time_buf <= unsigned(bram_doutb(BRAM_WIDTH-8-1 downto 0));
+    mask_buf <= bram_doutb(BRAM_WIDTH-1 downto BRAM_WIDTH-8);
 
 ---- Instantiation of Axi Bus Interface S00_AXI
     axi : rp_trig_axi
@@ -356,8 +368,8 @@ begin
            gate_in   => cc_gate,
            invert_in => cc_invert,
            head_in   => head_buf,
-           time_in   => bram_doutb(BRAM_WIDTH-8-1 downto 0),
-           mask_in   => bram_doutb(BRAM_WIDTH-1 downto BRAM_WIDTH-8),
+           time_in   => time_buf,
+           mask_in   => mask_buf,
            idle_out => idle,
            armed_out => armed,
            active_out => active,

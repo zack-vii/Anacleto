@@ -1,7 +1,7 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Thu Aug 13 11:47:29 2020
+//Date        : Mon Aug 17 23:07:55 2020
 //Host        : mds-data-2 running 64-bit unknown
 //Command     : generate_target system.bd
 //Design      : system
@@ -647,10 +647,12 @@ module system
   wire rp_trig_0_BRAM_PORTA_CLK;
   wire [47:0]rp_trig_0_BRAM_PORTA_DIN;
   wire [47:0]rp_trig_0_BRAM_PORTA_DOUT;
+  wire rp_trig_0_BRAM_PORTA_EN;
   wire rp_trig_0_BRAM_PORTA_WE;
   wire [15:0]rp_trig_0_BRAM_PORTB_ADDR;
   wire rp_trig_0_BRAM_PORTB_CLK;
   wire [47:0]rp_trig_0_BRAM_PORTB_DOUT;
+  wire rp_trig_0_BRAM_PORTB_WE;
   wire trg_in_1;
   wire trig_clk_out;
   wire trig_gate_out;
@@ -740,8 +742,9 @@ module system
         .dinb({1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0,1'b0}),
         .douta(rp_trig_0_BRAM_PORTA_DOUT),
         .doutb(rp_trig_0_BRAM_PORTB_DOUT),
+        .ena(rp_trig_0_BRAM_PORTA_EN),
         .wea(rp_trig_0_BRAM_PORTA_WE),
-        .web(1'b0));
+        .web(rp_trig_0_BRAM_PORTB_WE));
   system_clk_wiz_0_0 clk_wiz_0
        (.clk_in1(proc_sys7_FCLK_CLK0),
         .clk_out1(clk_wiz_0_clk_out1),
@@ -834,7 +837,9 @@ module system
         .bram_dina(rp_trig_0_BRAM_PORTA_DIN),
         .bram_douta(rp_trig_0_BRAM_PORTA_DOUT),
         .bram_doutb(rp_trig_0_BRAM_PORTB_DOUT),
+        .bram_ena(rp_trig_0_BRAM_PORTA_EN),
         .bram_wea(rp_trig_0_BRAM_PORTA_WE),
+        .bram_web(rp_trig_0_BRAM_PORTB_WE),
         .clk_axi_in(proc_sys7_FCLK_CLK0),
         .clk_ext_in(clk_1),
         .clk_int_in(clk_wiz_0_clk_out1),
