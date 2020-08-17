@@ -1,4 +1,5 @@
 #!/usr/bin/python2
+import sys
 import ctypes
 import numpy
 import socket
@@ -418,83 +419,145 @@ class rptrig(object):
 
 # UNIT TEST
 class Test(unittest.TestCase):
+    debug = False
+    status = None
+    timing = 0
+
+    @classmethod
+    def test_status(cls):
+        status = cls.dev.status
+        if status != cls.status:
+            cls.status = status
+            sys.stderr.write('%s\n' % str(cls.dev.status))
+
+    @classmethod
+    def trig(cls):
+        cls.dev.trig()
+        cls.timing = time.time()
+
+    @classmethod
+    def wait(cls, delay):
+        cls.timing += delay/1e7 * (1 << cls.clk_div)
+        delta = cls.timing - time.time()
+        if cls.debug:
+            sys.stderr.write('%s\n' % str(cls.dev.params))
+            step = max(.01, (1 << cls.clk_div)/2e7)
+            while delta >= 2*step:
+                time.sleep(step)
+                cls.test_status()
+                delta = cls.timing - time.time()
+            if delta > 0:
+                time.sleep(delta)
+            cls.test_status()
+        elif delta > 0:
+            time.sleep(delta)
+
+    @classmethod
+    def sleep(cls, delay):
+        time.sleep(delay/1e7 * (1 << cls.clk_div))
+
     @classmethod
     def setUpClass(cls):
+        cls.clk_div = 17 if cls.debug else 0
         cls.dev = rptrig()
         cls.dev.arm()
         cls.dev.disarm()
-        time.sleep(.001)
-        if cls.dev.try_extclk():
-            print("test using external clock.")
-            cls.dev.extclk(1)
+        cls.sleep(1)
+        cls.dev.extclk(0)
+        cls.dev.debug(cls.clk_div)
+        time.sleep(2)
 
     def default(self):
         self.dev.disarm()
         self.dev.make_clock()
         self.assertEqual(self.dev.params, (0, 5, 10, 1, 10, 1, 1))
+        self.assertEqual(self.dev.status.flags, '0000000000000000')
 
     def arm(self):
         self.dev.disarm()
+        self.sleep(1)
         self.assertTrue(self.dev.state & STATE_IDLE)
         self.dev.gate([2, 4])
         self.dev.invert([3, 4])
-        self.dev.make_clock(cycle=1000000, burst=1000, repeat=5)
-        self.assertEqual(self.dev.params, (0, 5, 10, 1000, 1000000, 5, 1))
+        burst = 3
+        width = max(2, 10000 >> self.clk_div)
+        period = width*2
+        cycle = burst*period
+        self.dev.make_clock(width=width, cycle=cycle, burst=burst, repeat=5)
+        self.assertEqual(self.dev.params,
+                         (0, width, period, burst, cycle, 5, 1))
+        delay = max(2, 1000000 >> self.clk_div)
+        steps = 3*width
+        cycle = steps*3*burst
         self.dev.make_sequence(
-                1e6, 1e3, 2e3, 10, 3e6, 3, [0, 1e5, 2e5])
+                delay, width, period, burst, cycle, 2, [0, steps, 2*steps])
+        self.sleep(1)
         self.assertEqual(
-            self.dev.params, (1000000, 1000, 2000, 10, 3000000, 3, 3))
+            self.dev.params, (delay, width, period, burst, cycle, 2, 3))
         self.dev.arm()
+        self.sleep(2)
         self.assertTrue(self.dev.state & STATE_ARMED)
-        self.dev.trig()
-        time.sleep(.05)
-        for i in range(3):
-            self.assertFalse(self.dev.state & STATE_NOTWAIT)
-            time.sleep(.1)
-            self.assertTrue(self.dev.state & STATE_ACTIVE)  # HIGH
-            time.sleep(.1)
-            self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
-            time.sleep(.1)
+        self.trig()
+        self.wait(delay/2)
+        self.assertFalse(self.dev.state & STATE_NOTWAIT)
+        self.wait((delay+cycle-width)/2)
+        self.assertEqual(self.dev.status.total, 1)
+        self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
+        self.wait(cycle)
+        self.assertEqual(self.dev.status.total, 2)
+        self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
+        self.wait((cycle+width)/2)
         self.assertTrue(self.dev.state & STATE_IDLE)
+        self.assertEqual(self.dev.status.flags, '0000000000000000')
 
     def rearm(self):
+        delay = max(1, 1500000 >> self.clk_div)
+        width = max(1, 1000000 >> self.clk_div)
+        period = 2*width
         self.dev.disarm()
+        self.sleep(2)
         self.assertTrue(self.dev.state & STATE_IDLE)
         self.dev.rearm()
-        self.dev.make_clock(delay=1500000, width=1000000)
-        self.assertEqual(
-                self.dev.params, (1500000, 1000000, 2000000, 1, 2000000, 1, 1))
+        self.sleep(2)
         self.assertTrue(self.dev.state & STATE_ARMED)
-        self.dev.trig()
-        time.sleep(.1)
+        self.dev.make_clock(delay=delay, width=width)
+        self.assertEqual(
+                self.dev.params, (delay, width, period, 1, period, 1, 1))
+        self.trig()
+        self.wait(delay/2)
         self.assertFalse(self.dev.state & STATE_NOTWAIT)
-        time.sleep(.1)
+        self.wait((delay+width)/2)
         self.assertTrue(self.dev.state & STATE_ACTIVE)  # HIGH
-        time.sleep(.1)
+        self.wait(width)
         self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
-        time.sleep(.1)
+        self.wait(width)
         self.assertTrue(self.dev.state & STATE_ARMED)
         self.assertEqual(
-            self.dev.params, (1500000, 1000000, 2000000, 1, 2000000, 1, 1))
+            self.dev.params, (delay, width, period, 1, period, 1, 1))
 
     def reinit(self):
+        delay = max(2, 1500000 >> self.clk_div)
+        width = max(2, 1000000 >> self.clk_div)
+        period = 2*width
         self.dev.disarm()
+        self.sleep(2)
         self.assertTrue(self.dev.state & STATE_IDLE)
         self.dev.reinit()
+        self.sleep(2)
         self.assertTrue(self.dev.state & STATE_ARMED)
-        self.dev.trig()
+        self.trig()
         p = self.dev.params
         self.assertEqual((p[0], p[3:6]), (600000000, (0, 0, 0)))
-        time.sleep(.1)
+        self.wait(delay/2)
         self.assertFalse(self.dev.state & STATE_NOTWAIT)
-        self.dev.make_clock(delay=1500000, width=1000000)
+        self.dev.make_clock(delay=delay, width=width)
         self.assertEqual(
-                self.dev.params, (1500000, 1000000, 2000000, 1, 2000000, 1, 1))
-        time.sleep(.1)
+                self.dev.params, (delay, width, period, 1, period, 1, 1))
+        self.wait((delay+width)/2)
         self.assertTrue(self.dev.state & STATE_ACTIVE)  # HIGH
-        time.sleep(.1)
+        self.wait(width)
         self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
-        time.sleep(.1)
+        self.wait(width)
         self.assertTrue(self.dev.state & STATE_ARMED)
         p = self.dev.params
         self.assertEqual((p[0], p[3:6]), (600000000, (0, 0, 0)))
@@ -505,24 +568,27 @@ class Test(unittest.TestCase):
 
     tests = ('default', 'arm', 'rearm', 'reinit')
     @classmethod
-    def getTests(cls): return tuple(map(cls, Test.tests))
+    def getTests(cls, tests=()): return tuple(map(cls, tests or Test.tests))
 
 
-def test(host=None):
-    import os
-    suite = unittest.TestSuite(Test.getTests())
-    tr = unittest.TextTestRunner(stream=os.sys.stderr, verbosity=2)
+def test(debug=False, tests=()):
+    Test.debug = bool(debug)
+    suite = unittest.TestSuite(Test.getTests(tests))
+    tr = unittest.TextTestRunner(stream=sys.stderr, verbosity=2)
     tr.run(suite)
 
 
 # EXECUTION
 if __name__ == "__main__":
-    import sys
+    # rptrig 5000    - run server on port 5000
+    # rptrig t       - run tests
+    # rptrig d       - run tests with debug on
+    # rptrig d arm   - run arm test with debug on
     if len(sys.argv) > 1:
         try:
             port = int(sys.argv[1])
             rptrig().run(port)
         except ValueError:
-            test()
+            test(sys.argv[1].startswith('d'), sys.argv[2:])
     else:
         rptrig().run(5000)
