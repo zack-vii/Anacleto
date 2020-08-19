@@ -4,26 +4,26 @@ use ieee.numeric_std.all;
 
 entity rp_trig_prog is
     generic (
-      ADDR_WIDTH  : integer := 16;
-      DATA_WIDTH  : integer := 64;
-      TIME_WIDTH  : integer := 40;
-      HEAD_COUNT  : integer := 7;
-      DATA_COUNT  : integer := 8
+       ADDR_WIDTH  : integer := 16;
+        DATA_WIDTH  : integer := 64;
+        TIME_WIDTH  : integer := 40;
+        HEAD_COUNT  : integer := 7;
+        DATA_COUNT  : integer := 8
     );
     port (
-       clk_axi_in : in      STD_LOGIC;
-       clk_in     : in      STD_LOGIC;
-       trg_in     : in      STD_LOGIC;
-       time_in    : in      UNSIGNED(TIME_WIDTH-1 downto 0);
-       mask_in    : in      STD_LOGIC_VECTOR(7 downto 0);
-       ctrl_in    : in      STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
-       head_in    : in      STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
-       idl_out    : out     STD_LOGIC;
-       arm_out    : out     STD_LOGIC;
-       run_out    : out     STD_LOGIC;
-       index_out  : out     UNSIGNED(ADDR_WIDTH-1 downto 0);
-       state_out  : out     STD_LOGIC_VECTOR(DATA_COUNT*DATA_WIDTH-1 downto 0);
-       signal_out : out     STD_LOGIC_VECTOR(7 downto 0)
+        clk_axi_in  : in    STD_LOGIC;
+        clk_in      : in    STD_LOGIC;
+        trg_in      : in    STD_LOGIC;
+        time_in     : in    UNSIGNED(TIME_WIDTH-1 downto 0);
+        mask_in     : in    STD_LOGIC_VECTOR(7 downto 0);
+        ctrl_in     : in    STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+        head_in     : in    STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
+        idl_out     : out   STD_LOGIC;
+        arm_out     : out   STD_LOGIC;
+        run_out     : out   STD_LOGIC;
+        index_out   : out   UNSIGNED(ADDR_WIDTH-1 downto 0);
+        state_out   : out   STD_LOGIC_VECTOR(DATA_COUNT*DATA_WIDTH-1 downto 0);
+        signal_out  : out   STD_LOGIC_VECTOR(7 downto 0)
     );
 end;
 
@@ -73,7 +73,9 @@ architecture Behavioral of rp_trig_prog is
     --signal ctrl_buf     : STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal head_buf     : STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
     signal gstate       : STD_LOGIC_VECTOR(1 downto 0) := G_IDL;
-    
+    signal reset        : STD_LOGIC;
+    signal clear        : STD_LOGIC;
+        
     alias index         is index_buf;
     alias sample        is time_buf;
     alias mask          is mask_buf;
@@ -104,43 +106,50 @@ begin
       
     process(clk_axi_in, clk_in, trg_in)
     is
-        variable delay      : unsigned(22 downto 0) := (others => '0');
+        variable delayL     : unsigned(22 downto 0) := (others => '0');
+        variable delayH     : unsigned(22 downto 0) := (others => '0');
         variable high       : unsigned(22 downto 0) := (others => '0');
         variable width      : unsigned(22 downto 0) := (others => '0');
-        variable clk_buf    : std_logic := '0';
-        variable trg_buf    : std_logic := '0';
+        variable clk_rv     : std_logic := '0';
+        variable trg_rv     : std_logic := '0';
     begin
         if rising_edge(clk_axi_in)
         then
-            if (clk_in and not clk_buf) = '1'
+            if (clk_in and not clk_rv) = '1'
             then
-                if high < delay + width
-                then delay := (others => '0');
+                if high < delayH
+                then
+                    delayL := (others => '0');
+                    delayH := width;
                 end if;
                 high := (others => '0');
             else
                 high := high + 1;
-                if (not clk_in and clk_buf) = '1'
+                if (not clk_in and clk_rv) = '1'
                 then width := high;
                 end if;
             end if;
-            if trg_in = '1' and gstate = G_ARM
+            if (trg_in and not trg_rv) = '1' and gstate = G_ARM
             then
                 if clk_in = '1'
-                then delay := high;
-                else delay := high - width;
+                then
+                    delayL := high;
+                    delayH := high + width;
+                else
+                    delayL := high - width;
+                    delayH := high;
                 end if;
                 clk_s <= '1';
             else
-                if (high = delay) or (high = delay + width)
+                if (high = delayL) or (high = delayH)
                 then
                     clk_s <= not clk_s;
                 else
                     clk_s <= clk_s;
                 end if;
             end if;
-            trg_buf := trg_in;
-            clk_buf := clk_in;
+            trg_rv := trg_in;
+            clk_rv := clk_in;
         end if;
     end process;
     clk <= clk_s when c_trgsync = '1' else clk_in;
@@ -154,6 +163,8 @@ begin
             head_buf    <= head_in;
             time_buf    <= time_in;
             mask_buf    <= mask_in;
+            reset       <= c_clear or not c_on;
+            clear       <= c_clear;
             delay_total <= unsigned(head_buf(0*DATA_WIDTH+TIME_WIDTH-1 downto 0*DATA_WIDTH));
             width_total <= unsigned(head_buf(1*DATA_WIDTH+TIME_WIDTH-1 downto 1*DATA_WIDTH));
             period_total<= unsigned(head_buf(2*DATA_WIDTH+TIME_WIDTH-1 downto 2*DATA_WIDTH));
@@ -226,6 +237,7 @@ begin
         procedure rearm
         is
         begin
+            drearm := '1';
             next_index := zeroaddr;
             if c_arm = '1'
             then gstate <= G_ARM;
@@ -332,7 +344,6 @@ begin
                     wait_for := W_CYCLE;
                     waiting;
                 else
-                    drearm := '1';
                     rearm;
                 end if;
             else
@@ -356,15 +367,13 @@ begin
    begin
         if rising_edge(clk_axi_in)
         then
-            if c_clear = '1'
-            then error := '0';
-            end if;
-            if error = '0'
+            if clear = '1' or error = '0'
             then
+                error  := '0';
                 check  := restart;
                 invert := cc_invert;
                 gate   := cc_gate;
-                if (not c_on or c_clear) = '1'
+                if reset = '1'
                 then
                     next_index  := zeroaddr;
                     output      := (others => '0');
@@ -376,8 +385,7 @@ begin
                     burst_count := zerotime;
                     restart     := '0';
                     gstate      <= G_IDL;
-                end if;
-               
+                end if;               
                 if ((clk and not clk_r) or (not gstate(1) and trg_in)) = '1'
                 then
                     clk_r <= '1';

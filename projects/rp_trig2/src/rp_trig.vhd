@@ -354,18 +354,18 @@ begin
             DATA_COUNT => STAT_COUNT
         )
         port map (
-           clk_axi_in   => clk_axi_in,
-           clk_in       => clk,
-           trg_in       => trg,
-           time_in      => time_buf,
-           mask_in      => mask_buf,
-           ctrl_in      => ctrl_buf,
-           head_in      => head_buf,
-           idl_out      => idl,
-           arm_out      => arm,
-           run_out      => run,
-           index_out    => s_addr,
-           state_out    => state,
-           signal_out   => signals
+            clk_axi_in  => clk_axi_in,
+            clk_in      => clk,
+            trg_in      => trg,
+            time_in     => time_buf,
+            mask_in     => mask_buf,
+            ctrl_in     => ctrl_buf,
+            head_in     => head_buf,
+            idl_out     => idl,
+            arm_out     => arm,
+            run_out     => run,
+            index_out   => s_addr,
+            state_out   => state,
+            signal_out  => signals
         );
 end arch_imp;
