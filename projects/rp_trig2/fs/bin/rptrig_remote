@@ -6,9 +6,11 @@ import struct
 import numpy
 import time
 import unittest
+if os.sys.version_info >= (3,):
+    long = int
 
 
-def s(b): b if isinstance(b, type('')) else b.decode("utf-8")
+def s(b): return b if isinstance(b, type('')) else b.decode("utf-8")
 
 
 # STATE CONSTANTS
@@ -20,18 +22,18 @@ INIT_REARM = 7
 INIT_REINIT = 15
 
 MAX_STATUS = 8
-MAX_SAMPLES = 54272
+MAX_SAMPLES = 45000
 
 TIME_MASK = (1 << TIME_WIDTH) - 1
 
 STATE_CH0 = 1
 STATE_CH1 = 2
 STATE_CH2 = 4
-STATE_CH3 = 8
-STATE_IDLE = 16
-STATE_ARMED = 32
-STATE_ACTIVE = 64
+STATE_IDLE = 8
+STATE_ARMED = 16
+STATE_ACTIVE = 32
 STATE_NOTWAIT = STATE_IDLE | STATE_ARMED | STATE_ACTIVE
+STATE_TRG = 64
 STATE_CLK = 128
 
 
@@ -44,30 +46,58 @@ Status = namedtuple("Status", (
     "burst",
     "total",
     "flags",
-    "signals",
 ))
 
-# # FLAGS
-# 0:2   gstate: 00=IDLE, 01=ARMED, 10=WAIT, 11:ACTIVE
-#  2    wait_for: 0=CYCLE, 1:DELAY
-#  3    clear
-#  4    inc_addr
-#  5    restart
-#  6    check
-#  7    error
-#  8    on
-#  9    checktrigger
-# 10    waiting
-# 11    runprogram
-# 12    runprogram1
-# 13    runsequence
-# 14    rearm
-# 15    increment
-# 56:64 signals
+
+class Flags(long):
+    def __str__(self):
+        out = ''.join(
+            c.upper() if (self >> 7-i) & 1 else c
+            for i, c in enumerate('eoric')
+        )
+        return self.signals + out + self.wait_for[0] + self.gstate[0]
+
+    def __repr__(self): return self.__str__() + bin(
+            ((self >> 8) | 256) & 0x1FF)[3:]
+
+    @property
+    def gstate(self):
+        if self & 0x02:
+            if self & 0x01:
+                return 'RUN'
+            return 'WAI'
+        elif self & 0x01:
+            return 'ARM'
+        return 'IDL'
+
+    @property
+    def wait_for(self): return 'DELAY' if self & 0x04 else 'CYCLE'
+
+    @property
+    def clear(self): return bool(self & 0x08)
+
+    @property
+    def inc_addr(self): return bool(self & 0x10)
+
+    @property
+    def restart(self): return bool(self & 0x20)
+
+    @property
+    def check(self): return bool(self & 0x40)
+
+    @property
+    def error(self): return bool(self & 0x80)
+
+    @property
+    def signals(self): return bin(((self >> 56) & 0xFF) | (1 << 8))[3:]
 
 
 # rp_trig CONNECTION
-class rp_trig(object):
+class rp_trig:
+    """Remote control over RedPitaya RP_TRIG v2 module.
+
+    https://github.com/zack-vii/Anacleto   projects/pr_trig2
+    """
     @staticmethod
     def _tobyte(val):
         if not isinstance(val, int):
@@ -88,9 +118,9 @@ class rp_trig(object):
         host = address.split(':', 2) + [5000]
         port = int(host[1])
         self._address = (host[0], port)
-        self.connect()
+        self._connect()
 
-    def connect(self):
+    def _connect(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(3)  # connect would never return if device offline
         self.sock.connect(self._address)
@@ -110,7 +140,7 @@ class rp_trig(object):
         try:
             while self.sock.recv(0x400):
                 pass
-        except OSError:
+        except Exception:
             pass
         self.sock.settimeout(1)
         self.sock.sendall(msg)
@@ -120,7 +150,7 @@ class rp_trig(object):
         def _tryexchange(msg, format, length):
             ret = self._exchange_safe(msg, length)
             while not ret:
-                self.connect()
+                self._connect()
                 ret = self._exchange_safe(msg, length)
             return struct.unpack(format, ret)
         length = struct.calcsize(format)
@@ -129,7 +159,7 @@ class rp_trig(object):
         except (KeyboardInterrupt, SystemExit):
             raise
         except OSError:
-            self.connect()
+            self._connect()
             return _tryexchange(msg, format, length)
 
     def _exchange_str(self, msg):
@@ -145,33 +175,48 @@ class rp_trig(object):
 
     @property
     def status(self):
-        """Return status buffer.
-
-        [0]: index
-        [1]: sample[index]
-        [2]: mask[index]
-        [3]: cycle_count
-
-        """
+        """Return current status buffer."""
         status = self.statusx
         index = status[0]
         time = status[1] & TIME_MASK
         mask = status[1] >> TIME_WIDTH
-        cycle, period, burst, repeat = status[2:6]
-        flags = bin((status[6] & 0xFFFF) | (1 << 16))[3:]
-        sigs = bin(((status[6] >> 56) & 0xFF) | (1 << 8))[3:]
+        cycle, sequence, burst, repeat = status[2:6]
+        flags = Flags(status[6])
         return Status(
-            index, time, mask, cycle, period, burst, repeat, flags, sigs)
+            index, time, mask, cycle, sequence, burst, repeat, flags)
 
     def make_clock(
-            self, delay=0, width=-1, period=-1, burst=-1, cycle=-1, repeat=-1):
+            self, delay=0, width=-1, period=-1,
+            burst=-1, cycle=-1, repeat=-1):
+        """Set up default clock with trivial timing.
+
+        The following parameters are transmitted:
+            DELAY, WIDTH, PERIOD, BURST, CYCLE, and REPEAT
+
+        TIMES   defaults to [0].
+        MASK    defaults to [0xFF]
+        """
+
         args = rp_trig._tointargs(delay, width, period, burst, cycle, repeat)
         msg = rp_trig._make_msg(b'C', '<6q', *args)
         return self._exchange_str(msg)
 
+    def _make_sequence(
+            self, delay=-1, width=-1, period=-1,
+            burst=-1, cycle=-1, repeat=-1, data=(255 << TIME_WIDTH,)):
+        data = numpy.array(data, numpy.int64).tostring()
+        args = rp_trig._tointargs(delay, width, period, burst, cycle, repeat)
+        msg = rp_trig._make_msg(b'S', '<6q', *args, append=len(data))
+        return self._exchange_str(msg + data)
+
     def make_sequence(
             self, delay=-1, width=-1, period=-1,
             burst=-1, cycle=-1, repeat=-1, times=(0,), mask=()):
+        """Set up with timing and mask control.
+
+        The following parameters are transmitted:
+            DELAY, WIDTH, PERIOD, BURST, CYCLE, REPEAT, TIMES, and MASK
+        """
         mask = numpy.array(
                 [(m & 0xFF) << TIME_WIDTH for m in mask or [255]],
                 dtype=numpy.uint64)
@@ -186,43 +231,56 @@ class rp_trig(object):
         return self._make_sequence(
             delay, width, period, burst, cycle, repeat, times | mask)
 
-    def _make_sequence(
-            self, delay=-1, width=-1, period=-1,
-            burst=-1, cycle=-1, repeat=-1, data=(255 << TIME_WIDTH,)):
-        data = numpy.array(data, numpy.int64).tostring()
-        args = rp_trig._tointargs(delay, width, period, burst, cycle, repeat)
-        msg = rp_trig._make_msg(b'S', '<6q', *args, append=len(data))
-        return self._exchange_str(msg + data)
-
     def arm(self):
+        """Arm the device for one shot operation - disarms when done."""
         return self._exchange_str(rp_trig._make_msg(b'A'))
 
     def rearm(self):
+        """Arm the device for multi shot operation - re-arms when done."""
         return self._exchange_str(rp_trig._make_msg(b'R'))
 
     def reinit(self, default_delay=-1):
+        """Arm the device for special reinit operation.
+
+        Device can be programmed during delay period after receiving tigger.
+        """
         return self._exchange_str(
                 rp_trig._make_msg(b'X', '<q', default_delay))
 
     def disarm(self):
+        """Disarm the device, clears error flags and aborts programs."""
         return self._exchange_str(rp_trig._make_msg(b'D'))
 
     def trig(self):
+        """Simulate trigger, i.e. start program if device is armed."""
         return self._exchange_str(rp_trig._make_msg(b'T'))
 
-    def extclk(self, value=True):
+    def clksrc(self, val=3):
+        """Change clock source and sync behaviour.
+
+        bit     set                     cleared
+        1:      external,               internal.
+        2:      sync with trigger,      sync with clock
+        """
         return self._exchange_str(
-                rp_trig._make_msg(b'E', '<b', 1 if value else 0))
+                rp_trig._make_msg(b'E', '<B', val))
 
     def gate(self, val=0):
+        """Set gate flag of channels.
+
+        In gate mode each event in timing will toggle output instead of
+        generating a pulse.
+        """
         return self._exchange_str(
             rp_trig._make_msg(b'G', '<B', self._tobyte(val)))
 
     def invert(self, val=0):
+        """Set invert flag of channels."""
         return self._exchange_str(
             rp_trig._make_msg(b'I', '<B', self._tobyte(val)))
 
     def debug(self, val=0):
+        """Introduce a clock divider = 1 << val for internal clock."""
         return self._exchange_str(
             rp_trig._make_msg(b'd', '<B', self._tobyte(val)))
 
@@ -246,8 +304,9 @@ class rp_trig(object):
     def error(self):
         return self._exchange_str(rp_trig._make_msg(b'e'))
 
-    def try_extclk(self):
-        return bool(self._exchange(rp_trig._make_msg(b't'), '<B')[0])
+    def try_extclk(self, val=2):
+        return bool(self._exchange(
+                rp_trig._make_msg(b't', '<B', val), '<B')[0])
 
 
 # UNIT TEST
@@ -256,60 +315,51 @@ class Test(unittest.TestCase):
     status = None
     timing = 0
 
-    @classmethod
-    def test_status(cls):
-        status = cls.dev.status
-        if status != cls.status:
-            cls.status = status
-            os.sys.stderr.write('%s\n' % str(cls.dev.status))
+    def test_status(self):
+        status = self.dev.status
+        if status != self.status:
+            self.status = status
+            os.sys.stderr.write('%s\n' % str(self.dev.status))
 
-    @classmethod
-    def trig(cls):
-        cls.dev.trig()
-        cls.timing = time.time()
+    def trig(self):
+        self.dev.trig()
+        self.timing = time.time()
 
-    @classmethod
-    def wait(cls, delay):
-        cls.timing += delay/1e7 * (1 << cls.clk_div)
-        delta = cls.timing - time.time()
-        if cls.debug:
-            os.sys.stderr.write('%s\n' % str(cls.dev.params))
-            step = max(.01, (1 << cls.clk_div)/2e7)
+    def wait(self, delay):
+        self.timing += delay/1e7 * (1 << self.clk_div)
+        delta = self.timing - time.time()
+        if self.debug:
+            os.sys.stderr.write('%s\n' % str(self.dev.params))
+            step = max(.01, (1 << self.clk_div)/2e7)
             while delta >= 2*step:
                 time.sleep(step)
-                cls.test_status()
-                delta = cls.timing - time.time()
+                self.test_status()
+                delta = self.timing - time.time()
             if delta > 0:
                 time.sleep(delta)
-            cls.test_status()
+            self.test_status()
         elif delta > 0:
             time.sleep(delta)
 
-    @classmethod
-    def sleep(cls, delay):
-        time.sleep(delay/1e7 * (1 << cls.clk_div))
+    def sleep(self, delay):
+        time.sleep(delay/1e7 * (1 << self.clk_div))
 
-    @classmethod
-    def setUpClass(cls):
-        cls.clk_div = 17 if cls.debug else 0
-        cls.dev = rp_trig(cls._host)
-        cls.dev.arm()
-        cls.dev.disarm()
-        cls.sleep(1)
-        cls.dev.extclk(0)
-        cls.dev.debug(cls.clk_div)
-        time.sleep(2)
+    def setUp(self):
+        self.clk_div = 17 if self.debug else 0
+        self.dev = rp_trig(self._host)
+        self.dev.disarm()
+        self.dev.gate()
+        self.dev.invert()
+        self.dev.clksrc(0)
+        self.dev.debug(self.clk_div)
+        self.assertTrue(self.dev.state & STATE_IDLE)
 
     def default(self):
-        self.dev.disarm()
         self.dev.make_clock()
         self.assertEqual(self.dev.params, (0, 5, 10, 1, 10, 1, 1))
-        self.assertEqual(self.dev.status.flags, '0000000000000000')
+        self.assertEqual(str(self.dev.status.flags), '00000000eoricCI')
 
     def arm(self):
-        self.dev.disarm()
-        self.sleep(1)
-        self.assertTrue(self.dev.state & STATE_IDLE)
         self.dev.gate([2, 4])
         self.dev.invert([3, 4])
         burst = 3
@@ -341,15 +391,12 @@ class Test(unittest.TestCase):
         self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
         self.wait((cycle+width)/2)
         self.assertTrue(self.dev.state & STATE_IDLE)
-        self.assertEqual(self.dev.status.flags, '0000000000000000')
+        self.assertEqual(str(self.dev.status.flags), '00011000eoricCI')
 
     def rearm(self):
         delay = max(1, 1500000 >> self.clk_div)
         width = max(1, 1000000 >> self.clk_div)
         period = 2*width
-        self.dev.disarm()
-        self.sleep(2)
-        self.assertTrue(self.dev.state & STATE_IDLE)
         self.dev.rearm()
         self.sleep(2)
         self.assertTrue(self.dev.state & STATE_ARMED)
@@ -367,14 +414,12 @@ class Test(unittest.TestCase):
         self.assertTrue(self.dev.state & STATE_ARMED)
         self.assertEqual(
             self.dev.params, (delay, width, period, 1, period, 1, 1))
+        self.assertEqual(str(self.dev.status.flags), '00000000eoricDA')
 
     def reinit(self):
         delay = max(2, 1500000 >> self.clk_div)
         width = max(2, 1000000 >> self.clk_div)
         period = 2*width
-        self.dev.disarm()
-        self.sleep(2)
-        self.assertTrue(self.dev.state & STATE_IDLE)
         self.dev.reinit()
         self.sleep(2)
         self.assertTrue(self.dev.state & STATE_ARMED)
@@ -394,6 +439,7 @@ class Test(unittest.TestCase):
         self.assertTrue(self.dev.state & STATE_ARMED)
         p = self.dev.params
         self.assertEqual((p[0], p[3:6]), (600000000, (0, 0, 0)))
+        self.assertEqual(str(self.dev.status.flags), '00000000eoricDA')
 
     def runTest(self):
         for test in self.tests:

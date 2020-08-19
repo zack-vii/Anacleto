@@ -1,4 +1,5 @@
 #!/usr/bin/python2
+from collections import namedtuple
 import sys
 import ctypes
 import numpy
@@ -7,6 +8,8 @@ import struct
 import time
 import threading
 import unittest
+if sys.version_info >= (3,):
+    long = int
 
 # STATE CONSTANTS
 TIME_WIDTH = 40
@@ -24,15 +27,70 @@ TIME_MASK = (1 << TIME_WIDTH) - 1
 STATE_CH0 = 1
 STATE_CH1 = 2
 STATE_CH2 = 4
-STATE_CH3 = 8
-STATE_IDLE = 16
-STATE_ARMED = 32
-STATE_ACTIVE = 64
+STATE_IDLE = 8
+STATE_ARMED = 16
+STATE_ACTIVE = 32
 STATE_NOTWAIT = STATE_IDLE | STATE_ARMED | STATE_ACTIVE
+STATE_TRG = 64
 STATE_CLK = 128
 
 
-class struct_rptrig(object):
+Status = namedtuple("Status", (
+    "index",
+    "time",
+    "mask",
+    "cycle",
+    "sequence",
+    "burst",
+    "total",
+    "flags",
+))
+
+
+class Flags(long):
+    def __str__(self):
+        out = ''.join(
+            c.upper() if (self >> 7-i) & 1 else c
+            for i, c in enumerate('eoric')
+        )
+        return self.signals + out + self.wait_for[0] + self.gstate[0]
+
+    def __repr__(self): return self.__str__() + bin(
+            ((self >> 8) | 256) & 0x1FF)[3:]
+
+    @property
+    def gstate(self):
+        if self & 0x02:
+            if self & 0x01:
+                return 'RUN'
+            return 'WAI'
+        elif self & 0x01:
+            return 'ARM'
+        return 'IDL'
+
+    @property
+    def wait_for(self): return 'DELAY' if self & 0x04 else 'CYCLE'
+
+    @property
+    def clear(self): return bool(self & 0x08)
+
+    @property
+    def inc_addr(self): return bool(self & 0x10)
+
+    @property
+    def restart(self): return bool(self & 0x20)
+
+    @property
+    def check(self): return bool(self & 0x40)
+
+    @property
+    def error(self): return bool(self & 0x80)
+
+    @property
+    def signals(self): return bin(((self >> 56) & 0xFF) | (1 << 8))[3:]
+
+
+class struct_rptrig:
     class _Device(ctypes.Structure):
         _fields_ = [
             ("status", ctypes.c_ubyte*8),
@@ -149,35 +207,48 @@ class rptrig(object):
             print('rptrig: ' + str(exc))
             raise
 
-    def try_extclk(self):
+    def try_extclk(self, val=2):
         from time import sleep
-        self.clksrc(0)
         self.debug(0)
         self.disarm()
-        if not self.state & STATE_IDLE:
-            print("Internal clock not idle?")
-        self.clksrc(1)
-        self.arm()
-        sleep(0.1)
-        hasext = self.state & STATE_ARMED
-        if not hasext:
-            self.clksrc(0)
-        self.disarm()
-        return hasext
+        self.clksrc(0)
+        try:
+            for i in range(10):
+                if self.state & STATE_IDLE:
+                    break
+                time.sleep(.1)
+            else:
+                print("Internal clock not idle?")
+            self.clksrc(1)
+            self._make_sequence(delay=1e9, data=[0])
+            self.arm()
+            sleep(0.1)
+            self.trig()
+            sleep(0.1)
+            if self.state == STATE_IDLE:  # clear extclk bit
+                self.clksrc(val & -2)
+                return False
+            self.clksrc(val | 1)
+            return True
+        except Exception:
+            return False
+        finally:
+            self.disarm()
 
     @property
     def statusx(self): return self.dev.device.statusx[:]
 
     @property
     def status(self):
+        """Return current status buffer."""
         status = self.statusx
         index = status[0]
         time = status[1] & TIME_MASK
         mask = status[1] >> TIME_WIDTH
-        cycle, period, burst, repeat = status[2:6]
-        flags = bin((status[6] & 0xFFFF) | (1 << 16))[3:]
-        sigs = bin(((status[6] >> 56) & 0xFF) | (1 << 8))[3:]
-        return index, time, mask, cycle, period, burst, repeat, flags, sigs
+        cycle, sequence, burst, repeat = status[2:6]
+        flags = Flags(status[6])
+        return Status(
+            index, time, mask, cycle, sequence, burst, repeat, flags)
 
     def arm(self):
         self.cdll.RPTRIG_Arm()
@@ -385,7 +456,8 @@ class rptrig(object):
                                 continue
                             elif cmd == 't':
                                 self.conn.send(struct.pack(
-                                    '<B', int(self.iface.try_extclk())))
+                                    '<B', int(self.iface.try_extclk(
+                                        struct.unpack('<B', param[0])[0]))))
                                 continue
                             elif cmd == 's':
                                 self.conn.send(struct.pack(
@@ -423,60 +495,51 @@ class Test(unittest.TestCase):
     status = None
     timing = 0
 
-    @classmethod
-    def test_status(cls):
-        status = cls.dev.status
-        if status != cls.status:
-            cls.status = status
-            sys.stderr.write('%s\n' % str(cls.dev.status))
+    def test_status(self):
+        status = self.dev.status
+        if status != self.status:
+            self.status = status
+            sys.stderr.write('%s\n' % str(self.dev.status))
 
-    @classmethod
-    def trig(cls):
-        cls.dev.trig()
-        cls.timing = time.time()
+    def trig(self):
+        self.dev.trig()
+        self.timing = time.time()
 
-    @classmethod
-    def wait(cls, delay):
-        cls.timing += delay/1e7 * (1 << cls.clk_div)
-        delta = cls.timing - time.time()
-        if cls.debug:
-            sys.stderr.write('%s\n' % str(cls.dev.params))
-            step = max(.01, (1 << cls.clk_div)/2e7)
+    def wait(self, delay):
+        self.timing += delay/1e7 * (1 << self.clk_div)
+        delta = self.timing - time.time()
+        if self.debug:
+            sys.stderr.write('%s\n' % str(self.dev.params))
+            step = max(.01, (1 << self.clk_div)/2e7)
             while delta >= 2*step:
                 time.sleep(step)
-                cls.test_status()
-                delta = cls.timing - time.time()
+                self.test_status()
+                delta = self.timing - time.time()
             if delta > 0:
                 time.sleep(delta)
-            cls.test_status()
+            self.test_status()
         elif delta > 0:
             time.sleep(delta)
 
-    @classmethod
-    def sleep(cls, delay):
-        time.sleep(delay/1e7 * (1 << cls.clk_div))
+    def sleep(self, delay):
+        time.sleep(delay/1e7 * (1 << self.clk_div))
 
-    @classmethod
-    def setUpClass(cls):
-        cls.clk_div = 17 if cls.debug else 0
-        cls.dev = rptrig()
-        cls.dev.arm()
-        cls.dev.disarm()
-        cls.sleep(1)
-        cls.dev.clksrc(0)
-        cls.dev.debug(cls.clk_div)
-        time.sleep(2)
+    def setUp(self):
+        self.clk_div = 17 if self.debug else 0
+        self.dev = rptrig()
+        self.dev.disarm()
+        self.dev.gate()
+        self.dev.invert()
+        self.dev.clksrc(0)
+        self.dev.debug(self.clk_div)
+        self.assertTrue(self.dev.state & STATE_IDLE)
 
     def default(self):
-        self.dev.disarm()
         self.dev.make_clock()
         self.assertEqual(self.dev.params, (0, 5, 10, 1, 10, 1, 1))
-        self.assertEqual(self.dev.status.flags, '0000000000000000')
+        self.assertEqual(str(self.dev.status.flags), '00000000eoricCI')
 
     def arm(self):
-        self.dev.disarm()
-        self.sleep(1)
-        self.assertTrue(self.dev.state & STATE_IDLE)
         self.dev.gate([2, 4])
         self.dev.invert([3, 4])
         burst = 3
@@ -508,15 +571,12 @@ class Test(unittest.TestCase):
         self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
         self.wait((cycle+width)/2)
         self.assertTrue(self.dev.state & STATE_IDLE)
-        self.assertEqual(self.dev.status.flags, '0000000000000000')
+        self.assertEqual(str(self.dev.status.flags), '00011000eoricCI')
 
     def rearm(self):
         delay = max(1, 1500000 >> self.clk_div)
         width = max(1, 1000000 >> self.clk_div)
         period = 2*width
-        self.dev.disarm()
-        self.sleep(2)
-        self.assertTrue(self.dev.state & STATE_IDLE)
         self.dev.rearm()
         self.sleep(2)
         self.assertTrue(self.dev.state & STATE_ARMED)
@@ -534,14 +594,12 @@ class Test(unittest.TestCase):
         self.assertTrue(self.dev.state & STATE_ARMED)
         self.assertEqual(
             self.dev.params, (delay, width, period, 1, period, 1, 1))
+        self.assertEqual(str(self.dev.status.flags), '00000000eoricDA')
 
     def reinit(self):
         delay = max(2, 1500000 >> self.clk_div)
         width = max(2, 1000000 >> self.clk_div)
         period = 2*width
-        self.dev.disarm()
-        self.sleep(2)
-        self.assertTrue(self.dev.state & STATE_IDLE)
         self.dev.reinit()
         self.sleep(2)
         self.assertTrue(self.dev.state & STATE_ARMED)
@@ -561,6 +619,7 @@ class Test(unittest.TestCase):
         self.assertTrue(self.dev.state & STATE_ARMED)
         p = self.dev.params
         self.assertEqual((p[0], p[3:6]), (600000000, (0, 0, 0)))
+        self.assertEqual(str(self.dev.status.flags), '00000000eoricDA')
 
     def runTest(self):
         for test in self.tests:
