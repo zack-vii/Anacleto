@@ -304,7 +304,7 @@ int PREFIX(MakeSequence)(
 int PREFIX(Trig)()
 {
 	INIT_DEVICE
-	dev->w_trig = -1;
+	dev->w_trig = 1;
 	return C_OK;
 }
 
@@ -312,7 +312,7 @@ int PREFIX(Arm)()
 {
 	int i;
 	INIT_DEVICE
-	dev->w_clear = -1;
+	dev->w_clear = 1;
 	dev->w_init    = INIT_ARM;
 	return C_OK;
 }
@@ -321,7 +321,7 @@ int PREFIX(Rearm)()
 {
 	int i;
 	INIT_DEVICE
-	dev->w_clear = -1;
+	dev->w_clear = 1;
 	dev->w_init = INIT_REARM;
 	return C_OK;
 }
@@ -373,9 +373,9 @@ int PREFIX(SetDebug)(uint8_t val)
 	return C_OK;
 }
 
-int PREFIX(SetClockExt)(int val)
+int PREFIX(SetClockSource)(int val)
 {
 	INIT_DEVICE
-	dev->w_extclk = val ? -1 : 0;
+	dev->w_clksrc = val;
 	return C_OK;
 }

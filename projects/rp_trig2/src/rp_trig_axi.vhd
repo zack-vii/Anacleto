@@ -17,7 +17,7 @@ entity rp_trig_axi is
      STRB_OUT      : out   STD_LOGIC_VECTOR((DATA_WIDTH/8)-1 downto 0);
      EN_OUT        : out   STD_LOGIC;
      WE_OUT        : out   STD_LOGIC;
-      
+
      -- AXI ports
      S_AXI_CLK     : in  std_logic;
      S_AXI_RESETN  : in  std_logic;

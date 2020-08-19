@@ -102,29 +102,26 @@ architecture arch_imp of rp_trig is
 
     component rp_trig_prog
         generic(
-            ADDR_WIDTH  : integer := 15;
-            DATA_WIDTH  : integer := 64;
-            TIME_WIDTH  : integer := 40;
-            HEAD_COUNT  : integer := 7;
-            DATA_COUNT  : integer := 7
+            ADDR_WIDTH  : integer;
+            DATA_WIDTH  : integer;
+            TIME_WIDTH  : integer;
+            HEAD_COUNT  : integer;
+            DATA_COUNT  : integer
         );
         port(
-            clk_in     : in  STD_LOGIC;
-            trg_in     : in  STD_LOGIC;
-            on_in      : in  STD_LOGIC;
-            armed_in   : in  STD_LOGIC;
-            clear_in   : in  STD_LOGIC;
-            gate_in    : in  STD_LOGIC_VECTOR(7 downto 0);
-            invert_in  : in  STD_LOGIC_VECTOR(7 downto 0);
-            head_in    : in  STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
-            time_in    : in  UNSIGNED(TIME_WIDTH-1 downto 0);
-            mask_in    : in  STD_LOGIC_VECTOR(7 downto 0);
-            idle_out   : out STD_LOGIC;
-            armed_out  : out STD_LOGIC;
-            active_out : out STD_LOGIC;
-            index_out  : out UNSIGNED(ADDR_WIDTH-1 downto 0);
-            state_out  : out STD_LOGIC_VECTOR(DATA_COUNT*DATA_WIDTH-1 downto 0);
-            signal_out : out STD_LOGIC_VECTOR(7 downto 0)
+            clk_axi_in  : in    STD_LOGIC;
+            clk_in      : in    STD_LOGIC;
+            trg_in      : in    STD_LOGIC;
+            time_in     : in    UNSIGNED(TIME_WIDTH-1 downto 0);
+            mask_in     : in    STD_LOGIC_VECTOR(7 downto 0);
+            ctrl_in     : in    STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
+            head_in     : in    STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
+            idle_out    : out   STD_LOGIC;
+            armed_out   : out   STD_LOGIC;
+            active_out  : out   STD_LOGIC;
+            index_out   : out   UNSIGNED(ADDR_WIDTH-1 downto 0);
+            state_out   : out   STD_LOGIC_VECTOR(DATA_COUNT*DATA_WIDTH-1 downto 0);
+            signal_out  : out   STD_LOGIC_VECTOR(7 downto 0)
         );
     end component;
 
@@ -146,9 +143,10 @@ architecture arch_imp of rp_trig is
     constant HEAD_HEAD : integer := HEAD_MAX*DATA_WIDTH-1;
     constant offset    : unsigned(ADDR_WIDTH-1 downto 0) := to_unsigned(HEAD_MAX, ADDR_WIDTH);
 
-    function addr2base(addr : unsigned) return integer is begin
-      return to_integer(addr)*DATA_WIDTH;
+    function addr2base(addr : unsigned) return integer
+    is begin return to_integer(addr)*DATA_WIDTH;
     end addr2base;
+
     signal m_addr   : unsigned(ADDR_WIDTH-1 downto 0);
     signal m_rdata  : std_logic_vector(DATA_WIDTH-1 downto 0);
     signal m_wdata  : std_logic_vector(DATA_WIDTH-1 downto 0);
@@ -157,18 +155,18 @@ architecture arch_imp of rp_trig is
 
     signal time_buf : unsigned(BRAM_WIDTH-9 downto 0);
     signal mask_buf : std_logic_vector(7 downto 0);
-        
+
     signal signals  : std_logic_vector(7 downto 0);
     signal state    : std_logic_vector(STAT_COUNT*DATA_WIDTH-1 downto 0);
     signal head_save: std_logic_vector(HEAD_COUNT*DATA_WIDTH-1 downto 0) := (others => '0');
 
-    signal clkbuf   : std_logic_vector(0 to INT_CLK_EXP+31) := (others => '0');
+    signal clkbuf   : std_logic_vector(-INT_CLK_EXP to 31) := (others => '0');
 
-    signal clk_div  : integer;
+    signal clk_div  : integer range 0 to 31;
     signal clk_sel  : boolean;
-    
     signal clk      : std_logic;
     signal trg      : std_logic;
+
     signal data_buf : std_logic_vector(HEAD_HEAD               downto 0) := (others => '0');
     alias  state_buf: std_logic_vector(STAT_COUNT*DATA_WIDTH-1 downto 0) is data_buf(STAT_HEAD downto STAT_BASE);
     alias  ctrl_buf : std_logic_vector(CTRL_COUNT*DATA_WIDTH-1 downto 0) is data_buf(CTRL_HEAD downto CTRL_BASE);
@@ -182,7 +180,7 @@ architecture arch_imp of rp_trig is
     alias  cc_trig  : std_logic_vector(7 downto 0) is ctrl_buf(1*8+7 downto 1*8);
     alias  cc_clear : std_logic_vector(7 downto 0) is ctrl_buf(2*8+7 downto 2*8);
     alias  cc_save  : std_logic_vector(7 downto 0) is ctrl_buf(3*8+7 downto 3*8);
-    alias  cc_extclk: std_logic_vector(7 downto 0) is ctrl_buf(4*8+7 downto 4*8);
+    alias  cc_clksrc: std_logic_vector(7 downto 0) is ctrl_buf(4*8+7 downto 4*8);
     alias  cc_invert: std_logic_vector(7 downto 0) is ctrl_buf(5*8+7 downto 5*8);
     alias  cc_gate  : std_logic_vector(7 downto 0) is ctrl_buf(6*8+7 downto 6*8);
     alias  cc_debug : std_logic_vector(7 downto 0) is ctrl_buf(7*8+7 downto 7*8);
@@ -193,56 +191,46 @@ architecture arch_imp of rp_trig is
     alias  c_trig   : std_logic is cc_trig(0);
     alias  c_clear  : std_logic is cc_clear(0);
     alias  c_save   : std_logic is cc_save(0);
-    alias  c_extclk : std_logic is cc_extclk(0);
+    alias  c_extclk : std_logic is cc_clksrc(0);
 begin
-
-    clkbuf(0) <= clk_int_in;
-    clock_divider : for i in 1 to 31+INT_CLK_EXP
+    clock_divider : for i in -INT_CLK_EXP to 30
     generate
         process(clkbuf)
         begin
-            if rising_edge(clkbuf(i-1))
-            then clkbuf(i) <= not clkbuf(i);
+            if rising_edge(clkbuf(i))
+            then clkbuf(i+1) <= not clkbuf(i+1);
             end if;
         end process;
     end generate;
+    clkbuf(-INT_CLK_EXP) <= clk_int_in;
 
-    clock : process(clk_axi_in,
-        clk_ext_in, c_extclk, clk_int_in)
+    clock : process(clk_axi_in, clk_ext_in, c_extclk, clk_int_in)
         variable clock : std_logic;
     begin
         if rising_edge(clk_axi_in)
         then
-            clk_sel <= c_extclk = '1';
-            clk_div <= to_integer(unsigned(cc_debug))+INT_CLK_EXP;
-        end if;
-    end process;
-    
-    clk <= clk_ext_in when clk_sel else clkbuf(clk_div);
-    clk_out <= clk_ext_in when clk_sel else clkbuf(clk_div);
-   
-    trigger : process(clk_axi_in, c_trig, trg_in)
-        variable trigger : std_logic;
-    begin
-        if rising_edge(clk_axi_in)
-        then
-            trigger := c_trig or trg_in;
-            trg <= trigger;
-            trg_out <= trigger;
+            if c_extclk = '1'
+            then clk <= clk_ext_in;
+            else clk <= clkbuf(to_integer(unsigned(cc_debug)));
+            end if;
         end if;
     end process;
 
-    signal_out <= signals;
-    state_out <= state(7 downto 0);
+    trg <= c_trig or trg_in;
+
+    clk_out <= state(7);
+    trg_out <= trg; --state(6);
     active_out <= active;
+    state_out <= state(7 downto 0);
+    signal_out <= signals;
 
     power_down <= c_extclk;
-    
+
     ---- BRAM
     bram_clka <= clk_axi_in;
     bram_rsta <= '0';
     bram_addra <= std_logic_vector(m_addr-offset);
-    
+
     bram_update : process(clk_axi_in, m_strb, m_wdata, bram_douta)
     begin
         if rising_edge(clk_axi_in)
@@ -258,24 +246,30 @@ begin
         end if;
     end process;
 
-    m_rdata(BRAM_WIDTH-1 downto 0         ) <=
-        data_buf(addr2base(m_addr)+BRAM_WIDTH-1 downto addr2base(m_addr)           ) when m_addr < offset else bram_douta;
-    m_rdata(DATA_WIDTH-1 downto BRAM_WIDTH) <=
-        data_buf(addr2base(m_addr)+DATA_WIDTH-1 downto addr2base(m_addr)+BRAM_WIDTH) when m_addr < offset else (others => '0');
-    
+    process(m_addr, bram_douta, data_buf)
+    begin
+        if m_addr < offset
+        then
+            m_rdata <= data_buf(addr2base(m_addr)+DATA_WIDTH-1 downto addr2base(m_addr));
+        else
+            m_rdata(BRAM_WIDTH-1 downto 0         ) <=  bram_douta;
+            m_rdata(DATA_WIDTH-1 downto BRAM_WIDTH) <= (others => '0');
+        end if;
+    end process;
+--    m_rdata(BRAM_WIDTH-1 downto 0         ) <=
+--        data_buf(addr2base(m_addr)+BRAM_WIDTH-1 downto addr2base(m_addr)           ) when m_addr < offset else bram_douta;
+--    m_rdata(DATA_WIDTH-1 downto BRAM_WIDTH) <=
+--        data_buf(addr2base(m_addr)+DATA_WIDTH-1 downto addr2base(m_addr)+BRAM_WIDTH) when m_addr < offset else (others => '0');
     -- b channel
     bram_rstb <= '0';
     bram_clkb <= clk_axi_in;
     bram_addrb <= std_logic_vector(s_addr);
     bram_enb <= '1';
     
-    -- DATA_BUF
-    update_buffer : process(clk_axi_in,
-        m_addr, m_strb, m_wdata, head_save, data_buf, state)
+    process(clk_axi_in, m_addr, m_strb, m_wdata, head_save, data_buf, state)
     begin
         if rising_edge(clk_axi_in)
         then
-            -- handle driver write operations
             if m_addr < offset
             then
                 for i in 0 to DATA_WIDTH/8-1
@@ -285,15 +279,14 @@ begin
                     end if;
                 end loop;
             end if;
-            -- handle fpga write operations
             state_buf <= state;
             if armed = '0'
             then
-                if (trg = '1' and c_rearm ='0')
+                if trg = '1' and c_rearm ='0'
                 then c_arm <= '0';
                 end if;
                 cc_trig <= (others => '0');
-                if (c_arm = '0' and idle = '1')
+                if c_arm = '0' and idle = '1'
                 then c_on <= '0';
                 end if;
             elsif c_reinit = '1'
@@ -308,7 +301,7 @@ begin
                 cc_save <= (others => '0');
             end if;
         end if;
-    end process update_buffer;
+    end process;
 
     time_buf <= unsigned(bram_doutb(BRAM_WIDTH-8-1 downto 0));
     mask_buf <= bram_doutb(BRAM_WIDTH-1 downto BRAM_WIDTH-8);
@@ -360,21 +353,18 @@ begin
             DATA_COUNT => STAT_COUNT
         )
         port map (
-           clk_in    => clk,
-           trg_in    => trg,
-           on_in     => c_on,
-           armed_in  => c_arm,
-           clear_in  => c_clear,
-           gate_in   => cc_gate,
-           invert_in => cc_invert,
-           head_in   => head_buf,
-           time_in   => time_buf,
-           mask_in   => mask_buf,
-           idle_out => idle,
-           armed_out => armed,
-           active_out => active,
-           index_out => s_addr,
-           state_out => state(STAT_COUNT*DATA_WIDTH-1 downto 0),
-           signal_out=> signals
+           clk_axi_in   => clk_axi_in,
+           clk_in       => clk,
+           trg_in       => trg,
+           time_in      => time_buf,
+           mask_in      => mask_buf,
+           ctrl_in      => ctrl_buf,
+           head_in      => head_buf,
+           idle_out     => idle,
+           armed_out    => armed,
+           active_out   => active,
+           index_out    => s_addr,
+           state_out    => state,
+           signal_out   => signals
         );
 end arch_imp;

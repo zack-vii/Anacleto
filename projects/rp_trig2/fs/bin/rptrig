@@ -41,7 +41,7 @@ class struct_rptrig(object):
             ("trig", ctypes.c_ubyte),
             ("clear", ctypes.c_ubyte),
             ("save", ctypes.c_ubyte),
-            ("extclk", ctypes.c_ubyte),
+            ("clksrc", ctypes.c_ubyte),
             ("invert", ctypes.c_ubyte),
             ("gate", ctypes.c_ubyte),
             ("debug", ctypes.c_ubyte),
@@ -151,17 +151,17 @@ class rptrig(object):
 
     def try_extclk(self):
         from time import sleep
-        self.extclk(0)
+        self.clksrc(0)
         self.debug(0)
         self.disarm()
         if not self.state & STATE_IDLE:
             print("Internal clock not idle?")
-        self.extclk(1)
+        self.clksrc(1)
         self.arm()
         sleep(0.1)
         hasext = self.state & STATE_ARMED
         if not hasext:
-            self.extclk(0)
+            self.clksrc(0)
         self.disarm()
         return hasext
 
@@ -230,9 +230,9 @@ class rptrig(object):
     def trig(self):
         self.cdll.RPTRIG_Trig()
 
-    def extclk(self, value):
-        self.cdll.RPTRIG_SetClockExt(
-            ctypes.c_int8(-1) if value else ctypes.c_int8(0))
+    def clksrc(self, value):
+        value = rptrig._tobyte(value)
+        self.cdll.RPTRIG_SetClockSource(ctypes.c_int8(value))
 
     def gate(self, value=0):
         value = rptrig._tobyte(value)
@@ -368,7 +368,7 @@ class rptrig(object):
                             elif cmd == 'T':
                                 self.iface.trig()
                             elif cmd == 'E':
-                                self.iface.extclk(
+                                self.iface.clksrc(
                                         struct.unpack('<B', param[0])[0])
                             elif cmd == 'G':
                                 self.iface.gate(
@@ -463,7 +463,7 @@ class Test(unittest.TestCase):
         cls.dev.arm()
         cls.dev.disarm()
         cls.sleep(1)
-        cls.dev.extclk(0)
+        cls.dev.clksrc(0)
         cls.dev.debug(cls.clk_div)
         time.sleep(2)
 
