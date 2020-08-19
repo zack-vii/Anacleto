@@ -1,7 +1,7 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Wed Aug 19 06:43:44 2020
+//Date        : Wed Aug 19 10:58:05 2020
 //Host        : mds-data-2 running 64-bit unknown
 //Command     : generate_target system_wrapper.bd
 //Design      : system_wrapper
@@ -31,10 +31,10 @@ module system_wrapper
     FIXED_IO_ps_clk,
     FIXED_IO_ps_porb,
     FIXED_IO_ps_srstb,
-    active_out,
     clk_in,
     clk_int_out,
     clk_out,
+    run_out,
     state0,
     state_leds,
     trg_in,
@@ -60,10 +60,10 @@ module system_wrapper
   inout FIXED_IO_ps_clk;
   inout FIXED_IO_ps_porb;
   inout FIXED_IO_ps_srstb;
-  output active_out;
   input clk_in;
   output clk_int_out;
   output clk_out;
+  output run_out;
   output [7:0]state0;
   output [7:0]state_leds;
   input trg_in;
@@ -90,10 +90,10 @@ module system_wrapper
   wire FIXED_IO_ps_clk;
   wire FIXED_IO_ps_porb;
   wire FIXED_IO_ps_srstb;
-  wire active_out;
   wire clk_in;
   wire clk_int_out;
   wire clk_out;
+  wire run_out;
   wire [7:0]state0;
   wire [7:0]state_leds;
   wire trg_in;
@@ -121,10 +121,10 @@ module system_wrapper
         .FIXED_IO_ps_clk(FIXED_IO_ps_clk),
         .FIXED_IO_ps_porb(FIXED_IO_ps_porb),
         .FIXED_IO_ps_srstb(FIXED_IO_ps_srstb),
-        .active_out(active_out),
         .clk_in(clk_in),
         .clk_int_out(clk_int_out),
         .clk_out(clk_out),
+        .run_out(run_out),
         .state0(state0),
         .state_leds(state_leds),
         .trg_in(trg_in),

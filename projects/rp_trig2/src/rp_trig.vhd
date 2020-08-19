@@ -11,31 +11,31 @@ entity rp_trig is
         INT_CLK_EXP : integer := 0  -- clk_int_in = (1<<INT_CLK_EXP) * 10MHz
     );
     port (
-        clk_axi_in : in  STD_LOGIC;
-        clk_int_in : in  STD_LOGIC;
-        clk_ext_in : in  STD_LOGIC;
-        trg_in     : in  STD_LOGIC;
-        trg_out    : out STD_LOGIC;
-        clk_out    : out STD_LOGIC;
-        active_out : out STD_LOGIC;
-        state_out  : out STD_LOGIC_VECTOR (7 downto 0);
-        signal_out : out STD_LOGIC_VECTOR (7 downto 0);
-        power_down : out STD_LOGIC;
+        clk_axi_in  : in  STD_LOGIC;
+        clk_int_in  : in  STD_LOGIC;
+        clk_ext_in  : in  STD_LOGIC;
+        trg_in      : in  STD_LOGIC;
+        trg_out     : out STD_LOGIC;
+        clk_out     : out STD_LOGIC;
+        run_out     : out STD_LOGIC;
+        state_out   : out STD_LOGIC_VECTOR (7 downto 0);
+        signal_out  : out STD_LOGIC_VECTOR (7 downto 0);
+        power_down  : out STD_LOGIC;
         -- PortA of blk_mem_gen
-        bram_clka  : out  STD_LOGIC;
-        bram_douta : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
-        bram_dina  : out  STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
-        bram_addra : out  STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
-        bram_ena   : out  STD_LOGIC;
-        bram_wea   : out  STD_LOGIC;
-        bram_rsta  : out  STD_LOGIC;
+        bram_clka   : out  STD_LOGIC;
+        bram_douta  : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
+        bram_dina   : out  STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
+        bram_addra  : out  STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
+        bram_ena    : out  STD_LOGIC;
+        bram_wea    : out  STD_LOGIC;
+        bram_rsta   : out  STD_LOGIC;
         -- PortB of blk_mem_gen
-        bram_addrb : out  STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
-        bram_clkb  : out  STD_LOGIC;
-        bram_doutb : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
-        bram_rstb  : out  STD_LOGIC;
-        bram_web   : out  STD_LOGIC;
-        bram_enb   : out  STD_LOGIC;
+        bram_addrb  : out  STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
+        bram_clkb   : out  STD_LOGIC;
+        bram_doutb  : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
+        bram_rstb   : out  STD_LOGIC;
+        bram_web    : out  STD_LOGIC;
+        bram_enb    : out  STD_LOGIC;
         -- Ports of Axi Slave Bus Interface S00_AXI
         s00_axi_resetn  : in  std_logic;
         s00_axi_awaddr  : in  std_logic_vector(ADDR_WIDTH+DATA_WIDTH/32 downto 0);
@@ -116,9 +116,9 @@ architecture arch_imp of rp_trig is
             mask_in     : in    STD_LOGIC_VECTOR(7 downto 0);
             ctrl_in     : in    STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
             head_in     : in    STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
-            idle_out    : out   STD_LOGIC;
-            armed_out   : out   STD_LOGIC;
-            active_out  : out   STD_LOGIC;
+            idl_out     : out   STD_LOGIC;
+            arm_out     : out   STD_LOGIC;
+            run_out     : out   STD_LOGIC;
             index_out   : out   UNSIGNED(ADDR_WIDTH-1 downto 0);
             state_out   : out   STD_LOGIC_VECTOR(DATA_COUNT*DATA_WIDTH-1 downto 0);
             signal_out  : out   STD_LOGIC_VECTOR(7 downto 0)
@@ -172,9 +172,9 @@ architecture arch_imp of rp_trig is
     alias  ctrl_buf : std_logic_vector(CTRL_COUNT*DATA_WIDTH-1 downto 0) is data_buf(CTRL_HEAD downto CTRL_BASE);
     alias  head_buf : std_logic_vector(HEAD_COUNT*DATA_WIDTH-1 downto 0) is data_buf(HEAD_HEAD downto HEAD_BASE);
     signal bram_douta_buf : std_logic_vector(BRAM_WIDTH-1 downto 0);
-    signal idle     : std_logic;
-    signal armed    : std_logic;
-    signal active   : std_logic;
+    signal idl      : std_logic;
+    signal arm      : std_logic;
+    signal run      : std_logic;
     
     alias  cc_init  : std_logic_vector(7 downto 0) is ctrl_buf(0*8+7 downto 0*8);
     alias  cc_trig  : std_logic_vector(7 downto 0) is ctrl_buf(1*8+7 downto 1*8);
@@ -220,7 +220,7 @@ begin
 
     clk_out <= state(7);
     trg_out <= trg; --state(6);
-    active_out <= active;
+    run_out <= run;
     state_out <= state(7 downto 0);
     signal_out <= signals;
 
@@ -265,6 +265,7 @@ begin
     bram_clkb <= clk_axi_in;
     bram_addrb <= std_logic_vector(s_addr);
     bram_enb <= '1';
+    bram_web <= '0';
     
     process(clk_axi_in, m_addr, m_strb, m_wdata, head_save, data_buf, state)
     begin
@@ -280,19 +281,19 @@ begin
                 end loop;
             end if;
             state_buf <= state;
-            if armed = '0'
+            if arm = '0'
             then
                 if trg = '1' and c_rearm ='0'
                 then c_arm <= '0';
                 end if;
                 cc_trig <= (others => '0');
-                if c_arm = '0' and idle = '1'
+                if c_arm = '0' and idl = '1'
                 then c_on <= '0';
                 end if;
             elsif c_reinit = '1'
             then head_buf <= head_save;
             end if;
-            if idle = '1'
+            if idl = '1'
             then cc_clear <= (others => '0');
             end if;
             if c_save = '1'
@@ -360,9 +361,9 @@ begin
            mask_in      => mask_buf,
            ctrl_in      => ctrl_buf,
            head_in      => head_buf,
-           idle_out     => idle,
-           armed_out    => armed,
-           active_out   => active,
+           idl_out      => idl,
+           arm_out      => arm,
+           run_out      => run,
            index_out    => s_addr,
            state_out    => state,
            signal_out   => signals

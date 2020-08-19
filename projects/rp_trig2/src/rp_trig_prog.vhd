@@ -18,9 +18,9 @@ entity rp_trig_prog is
        mask_in    : in      STD_LOGIC_VECTOR(7 downto 0);
        ctrl_in    : in      STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
        head_in    : in      STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
-       idle_out   : out     STD_LOGIC;
-       armed_out  : out     STD_LOGIC;
-       active_out : out     STD_LOGIC;
+       idl_out    : out     STD_LOGIC;
+       arm_out    : out     STD_LOGIC;
+       run_out    : out     STD_LOGIC;
        index_out  : out     UNSIGNED(ADDR_WIDTH-1 downto 0);
        state_out  : out     STD_LOGIC_VECTOR(DATA_COUNT*DATA_WIDTH-1 downto 0);
        signal_out : out     STD_LOGIC_VECTOR(7 downto 0)
@@ -36,10 +36,10 @@ architecture Behavioral of rp_trig_prog is
     constant zerotime   : UINTTIME  := to_unsigned(0, TIME_WIDTH);
     constant oneaddr    : UINTADDR  := to_unsigned(1, ADDR_WIDTH);
     constant onetime    : UINTTIME  := to_unsigned(1, TIME_WIDTH);
-    constant G_IDLE     : STD_LOGIC_VECTOR(1 downto 0) := "00";
-    constant G_ARMED    : STD_LOGIC_VECTOR(1 downto 0) := "01";
-    constant G_WAIT     : STD_LOGIC_VECTOR(1 downto 0) := "10";
-    constant G_ACTIVE   : STD_LOGIC_VECTOR(1 downto 0) := "11";
+    constant G_IDL      : STD_LOGIC_VECTOR(1 downto 0) := "00";
+    constant G_ARM      : STD_LOGIC_VECTOR(1 downto 0) := "01";
+    constant G_WAI      : STD_LOGIC_VECTOR(1 downto 0) := "10";
+    constant G_RUN      : STD_LOGIC_VECTOR(1 downto 0) := "11";
     -- states
     
     type S_STATE_T  is (S_NEXT, S_HIGH, S_LOW);
@@ -72,8 +72,7 @@ architecture Behavioral of rp_trig_prog is
 
     --signal ctrl_buf     : STD_LOGIC_VECTOR(DATA_WIDTH-1 downto 0);
     signal head_buf     : STD_LOGIC_VECTOR(HEAD_COUNT*DATA_WIDTH-1 downto 0);
-    signal gstate       : STD_LOGIC_VECTOR(1 downto 0) := G_IDLE;
-    signal clk_s        : std_logic := '0';
+    signal gstate       : STD_LOGIC_VECTOR(1 downto 0) := G_IDL;
     
     alias index         is index_buf;
     alias sample        is time_buf;
@@ -96,9 +95,57 @@ architecture Behavioral of rp_trig_prog is
     alias  c_save       : std_logic is cc_save(0);
     alias  c_extclk     : std_logic is cc_clksrc(0);
     alias  c_trgsync    : std_logic is cc_clksrc(1);
+    
+    signal clk          : std_logic := '0';
+    signal clk_s        : std_logic := '0';
+    signal clk_r        : std_logic := '0';
 begin
 
-    process(clk_axi_in, ctrl_in, head_in, time_in, mask_in)
+      
+    process(clk_axi_in, clk_in, trg_in)
+    is
+        variable delay      : unsigned(22 downto 0) := (others => '0');
+        variable high       : unsigned(22 downto 0) := (others => '0');
+        variable width      : unsigned(22 downto 0) := (others => '0');
+        variable clk_buf    : std_logic := '0';
+        variable trg_buf    : std_logic := '0';
+    begin
+        if rising_edge(clk_axi_in)
+        then
+            if (clk_in and not clk_buf) = '1'
+            then
+                if high < delay + width
+                then delay := (others => '0');
+                end if;
+                high := (others => '0');
+            else
+                high := high + 1;
+                if (not clk_in and clk_buf) = '1'
+                then width := high;
+                end if;
+            end if;
+            if trg_in = '1' and gstate = G_ARM
+            then
+                if clk_in = '1'
+                then delay := high;
+                else delay := high - width;
+                end if;
+                clk_s <= '1';
+            else
+                if (high = delay) or (high = delay + width)
+                then
+                    clk_s <= not clk_s;
+                else
+                    clk_s <= clk_s;
+                end if;
+            end if;
+            trg_buf := trg_in;
+            clk_buf := clk_in;
+        end if;
+    end process;
+    clk <= clk_s when c_trgsync = '1' else clk_in;
+
+    process(clk_axi_in)
     is
     begin
         if rising_edge(clk_axi_in)
@@ -117,12 +164,11 @@ begin
         end if;
     end process;
 
-    process(clk_axi_in, clk_in, trg_in, ctrl_in, time_buf, mask_buf, gstate,
-        delay_total, width_total,  period_total, burst_total, cycle_total, repeat_total, index_max)
+    process(clk_axi_in, clk, trg_in)
     is
         type W_WAITFOR_T is (W_CYCLE, W_DELAY);
         constant W_NULL         : W_WAITFOR_T := W_CYCLE;
-        variable idl_arm_act    : std_logic_vector(0 to 2);
+        variable idl_arm_run    : std_logic_vector(0 to 2);
 
         variable next_index     : UINTADDR;
         variable invert         : STD_LOGIC_VECTOR(7 downto 0);
@@ -145,9 +191,9 @@ begin
         alias dsignal0      is state(0);
         alias dsignal1      is state(1);
         alias dsignal2      is state(2);
-        alias didle         is state(3);
-        alias darmed        is state(4);
-        alias dactive       is state(5);
+        alias didl          is state(3);
+        alias darm          is state(4);
+        alias drun          is state(5);
         alias dtrg          is state(6);
         alias dclk          is state(7);
     
@@ -177,64 +223,13 @@ begin
         alias dincrement    is state(STATE_BIT+15);
         alias dsignals      is state(STATE_BIT+DATA_WIDTH-1 downto STATE_BIT+DATA_WIDTH-8);
 
-        variable clk_beat       : std_logic;
-        variable clk            : std_logic := '0';
-
-        procedure clock_gen
-        is
-            variable delay      : unsigned(22 downto 0) := (others => '0');
-            variable high       : unsigned(22 downto 0) := (others => '0');
-            variable width      : unsigned(22 downto 0) := (others => '0');
-            variable clk_buf    : std_logic := '0';
-            variable trg_buf    : std_logic := '0';
-            variable clk_s_buf  : std_logic := '0';
-        begin
-            if clk_in = '1' and clk_buf = '0'
-            then
-                if delay > high + width
-                then delay := (others => '0');
-                end if;
-                high := (others => '0');
-            else
-                high := high + 1;
-                if clk_in = '0' and clk_buf = '1'
-                then width := high;
-                end if;
-            end if;
-            if c_trgsync = '1'
-            then
-                if trg_in = '1' and gstate = G_ARMED
-                then
-                    if clk_in = '1'
-                    then delay := high;
-                    else delay := high - width;
-                    end if;
-                    clk := '1';
-                    clk_beat := '1';
-                else
-                    if (high = delay) or (high + width = delay)
-                    then
-                        clk := not clk;
-                        clk_beat := clk;
-                    else
-                        clk_beat := '0';
-                    end if;
-                end if;
-                trg_buf := trg_in;
-            else
-                clk := clk_in;
-                clk_beat := clk_in and not clk_buf;
-            end if;
-            clk_buf := clk_in;
-        end procedure;
-
         procedure rearm
         is
         begin
             next_index := zeroaddr;
             if c_arm = '1'
-            then gstate <= G_ARMED;
-            else gstate <= G_IDLE;
+            then gstate <= G_ARM;
+            else gstate <= G_IDL;
             end if;
         end procedure;
 
@@ -299,14 +294,14 @@ begin
             end case;
             if cycle_count < waitfor
             then
-                gstate <= G_WAIT;
+                gstate <= G_WAI;
                 increment(false);
             else
                 burst_count := onetime;
                 cycle_count := zerotime;
                 seq_count := zerotime;
                 restart := '0';
-                gstate <= G_ACTIVE;
+                gstate <= G_RUN;
                 run_sequence;
             end if;
         end procedure;
@@ -358,13 +353,12 @@ begin
                 waiting;
             end if;
         end procedure;
-    begin
+   begin
         if rising_edge(clk_axi_in)
         then
             if c_clear = '1'
             then error := '0';
             end if;
-            clock_gen;
             if error = '0'
             then
                 check  := restart;
@@ -375,37 +369,42 @@ begin
                     next_index  := zeroaddr;
                     output      := (others => '0');
                     seq_count   := zerotime;
-                    wait_for := W_NULL;
+                    wait_for    := W_NULL;
                     cycle_count := zerotime;
-                    period_count := (others => zerotime);
-                    repeat_count := zerotime;
+                    period_count:= (others => zerotime);
+                    repeat_count:= zerotime;
                     burst_count := zerotime;
-                    restart := '0';
-                    gstate <= G_IDLE;
-                elsif gstate(1) = '0'
+                    restart     := '0';
+                    gstate      <= G_IDL;
+                end if;
+               
+                if ((clk and not clk_r) or (not gstate(1) and trg_in)) = '1'
                 then
-                    if gstate(0) = '0'
-                       then rearm;
-                       else check_trigger;
-                    end if;
-                elsif clk_beat = '1'
-                then
+                    clk_r <= '1';
                     state(STATE_BIT+DATA_WIDTH-1 downto STATE_BIT) := (others => '0');
                     don := '1';
-                    if gstate(0) = '0'
-                    then waiting;
-                    else run_program;
+                    if gstate(1) = '0'
+                    then output := (others => '0');
                     end if;
+                    case gstate
+                    is
+                    when G_IDL  =>  rearm;
+                    when G_ARM  =>  check_trigger;
+                    when G_WAI  =>  waiting;
+                    when G_RUN  =>  run_program;
+                    end case;
+                else
+                    clk_r <= clk;
                 end if;
                 for i in 0 to 7
                 loop signals(i) := output(i) xor invert(i);
                 end loop;
                 case gstate
                 is
-                    when G_IDLE     => idl_arm_act := "100";
-                    when G_ARMED    => idl_arm_act := "010";
-                    when G_WAIT     => idl_arm_act := "000";
-                    when G_ACTIVE   => idl_arm_act := "001";
+                    when G_IDL  => idl_arm_run := "100";
+                    when G_ARM  => idl_arm_run := "010";
+                    when G_WAI  => idl_arm_run := "000";
+                    when G_RUN  => idl_arm_run := "001";
                 end case;
                 case wait_for
                 is
@@ -413,9 +412,9 @@ begin
                     when W_CYCLE    => dwait_for := '0';
                 end case;
                 dgstate     := gstate;
-                didle       := idl_arm_act(0);
-                darmed      := idl_arm_act(1);
-                dactive     := idl_arm_act(2);
+                didl        := idl_arm_run(0);
+                darm        := idl_arm_run(1);
+                drun        := idl_arm_run(2);
                 dclear      := c_clear;
                 drestart    := restart;
                 dcheck      := check;
@@ -426,18 +425,18 @@ begin
                 dcycle      := STD_LOGIC_VECTOR(cycle_count);
                 dseq        := STD_LOGIC_VECTOR(seq_count);
                 dburst      := STD_LOGIC_VECTOR(burst_count);
-                drepeat     := STD_LOGIC_VECTOR(repeat_count);          
+                drepeat     := STD_LOGIC_VECTOR(repeat_count);
                 dsignal0    := signals(0);
                 dsignal1    := signals(1);
                 dsignal2    := signals(2);
                 dsignals    := signals;
-                dtrg        := trg_in;
-                dclk        := clk;
             end if;
+            dtrg        := trg_in;
+            dclk        := clk;
             index       <= next_index;
-            idle_out    <= idl_arm_act(0);
-            armed_out   <= idl_arm_act(1);
-            active_out  <= idl_arm_act(2);
+            idl_out     <= idl_arm_run(0);
+            arm_out     <= idl_arm_run(1);
+            run_out     <= idl_arm_run(2);
             state_out   <= state;
             signal_out  <= signals;
         end if;
