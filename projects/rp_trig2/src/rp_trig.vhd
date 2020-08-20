@@ -16,6 +16,7 @@ entity rp_trig is
         clk_ext_in  : in  STD_LOGIC;
         trg_in      : in  STD_LOGIC;
         trg_out     : out STD_LOGIC;
+        clk_int_out : out STD_LOGIC;
         clk_out     : out STD_LOGIC;
         run_out     : out STD_LOGIC;
         state_out   : out STD_LOGIC_VECTOR (7 downto 0);
@@ -218,6 +219,7 @@ begin
 
     trg <= c_trig or trg_in;
 
+    clk_int_out <= clkbuf(0);
     clk_out <= state(7);
     trg_out <= trg; --state(6);
     run_out <= run;

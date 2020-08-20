@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<bd:repository xmlns:bd="http://www.xilinx.com/bd" bd:BoundaryCRC="0xE5BB37981B367FB0" bd:device="xc7z010clg400-1" bd:isValidated="true" bd:synthFlowMode="None" bd:tool_version="2017.2" bd:top="system" bd:version="1.00.a">
+<bd:repository xmlns:bd="http://www.xilinx.com/bd" bd:BoundaryCRC="0xE5BB3798DA615B68" bd:device="xc7z010clg400-1" bd:isValidated="true" bd:synthFlowMode="None" bd:tool_version="2017.2" bd:top="system" bd:version="1.00.a">
 
   <spirit:component xmlns:spirit="http://www.spiritconsortium.org/XMLSchema/SPIRIT/1685-2009">
     <spirit:vendor>xilinx.com</spirit:vendor>
@@ -940,7 +940,6 @@
       <spirit:adHocConnection>
         <spirit:name>clk_wiz_0_clk_out1</spirit:name>
         <spirit:internalPortReference spirit:componentRef="clk_wiz_0" spirit:portRef="clk_out1"/>
-        <spirit:externalPortReference spirit:portRef="clk_int_out"/>
         <spirit:internalPortReference spirit:componentRef="trig" spirit:portRef="clk_int_in"/>
       </spirit:adHocConnection>
       <spirit:adHocConnection>
@@ -972,6 +971,11 @@
         <spirit:name>trig_signal_out</spirit:name>
         <spirit:internalPortReference spirit:componentRef="trig" spirit:portRef="signal_out"/>
         <spirit:externalPortReference spirit:portRef="state0"/>
+      </spirit:adHocConnection>
+      <spirit:adHocConnection>
+        <spirit:name>trig_clk_int_out</spirit:name>
+        <spirit:internalPortReference spirit:componentRef="trig" spirit:portRef="clk_int_out"/>
+        <spirit:externalPortReference spirit:portRef="clk_int_out"/>
       </spirit:adHocConnection>
     </spirit:adHocConnections>
     <spirit:hierConnections>

@@ -1,7 +1,7 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Wed Aug 19 12:55:44 2020
+//Date        : Thu Aug 20 13:56:35 2020
 //Host        : mds-data-2 running 64-bit unknown
 //Command     : generate_target system.bd
 //Design      : system
@@ -654,6 +654,7 @@ module system
   wire [47:0]rp_trig_0_BRAM_PORTB_DOUT;
   wire rp_trig_0_BRAM_PORTB_WE;
   wire trg_in_1;
+  wire trig_clk_int_out;
   wire trig_clk_out;
   wire trig_gate_out;
   wire trig_power_down;
@@ -662,7 +663,7 @@ module system
   wire trig_trg_out;
 
   assign clk_1 = clk_in;
-  assign clk_int_out = clk_wiz_0_clk_out1;
+  assign clk_int_out = trig_clk_int_out;
   assign clk_out = trig_clk_out;
   assign run_out = trig_gate_out;
   assign state0[7:0] = trig_signal_out;
@@ -842,6 +843,7 @@ module system
         .clk_axi_in(proc_sys7_FCLK_CLK0),
         .clk_ext_in(clk_1),
         .clk_int_in(clk_wiz_0_clk_out1),
+        .clk_int_out(trig_clk_int_out),
         .clk_out(trig_clk_out),
         .power_down(trig_power_down),
         .run_out(trig_gate_out),

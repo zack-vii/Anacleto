@@ -48,7 +48,11 @@ set_property physical_name bram_web [ipx::get_port_maps WE -of_objects [ipx::get
 
 # Set clk_axi_in on s00_axi
 ipx::infer_bus_interface clk_axi_in xilinx.com:signal:clock_rtl:1.0 [ipx::current_core]
-ipx::associate_bus_interfaces -busif s00_axi -clock clk_axi_in [ipx::current_core]
+ipx::associate_bus_interfaces -busif s00_axi:BRAM_PORTA:BRAM_PORTB -clock clk_axi_in [ipx::current_core]
+ipx::infer_bus_interface clk_int_in xilinx.com:signal:clock_rtl:1.0 [ipx::current_core]
+ipx::infer_bus_interface clk_int_out xilinx.com:signal:clock_rtl:1.0 [ipx::current_core]
+ipx::add_bus_parameter FREQ_HZ [ipx::get_bus_interfaces clk_int_out -of_objects [ipx::current_core]]
+set_property value 10000000 [ipx::get_bus_parameters FREQ_HZ -of_objects [ipx::get_bus_interfaces clk_int_out -of_objects [ipx::current_core]]]
 
 
 # Add MDD to SoftwareDriverGroup
