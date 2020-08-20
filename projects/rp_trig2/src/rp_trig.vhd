@@ -23,20 +23,19 @@ entity rp_trig is
         signal_out  : out STD_LOGIC_VECTOR (7 downto 0);
         power_down  : out STD_LOGIC;
         -- PortA of blk_mem_gen
-        bram_clka   : out  STD_LOGIC;
-        bram_douta  : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
-        bram_dina   : out  STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
-        bram_addra  : out  STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
-        bram_ena    : out  STD_LOGIC;
-        bram_wea    : out  STD_LOGIC;
-        bram_rsta   : out  STD_LOGIC;
+        brama_clk   : out  STD_LOGIC;
+        brama_rst   : out  STD_LOGIC;
+        brama_en    : out  STD_LOGIC;
+        brama_addr  : out  STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
+        brama_dout  : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
+        brama_we    : out  STD_LOGIC;
+        brama_din   : out  STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
         -- PortB of blk_mem_gen
-        bram_addrb  : out  STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
-        bram_clkb   : out  STD_LOGIC;
-        bram_doutb  : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
-        bram_rstb   : out  STD_LOGIC;
-        bram_web    : out  STD_LOGIC;
-        bram_enb    : out  STD_LOGIC;
+        bramb_clk   : out  STD_LOGIC;
+        bramb_rst   : out  STD_LOGIC;
+        bramb_en    : out  STD_LOGIC;
+        bramb_addr  : out  STD_LOGIC_VECTOR(ADDR_WIDTH-1 downto 0);
+        bramb_dout  : in   STD_LOGIC_VECTOR(BRAM_WIDTH-1 downto 0);
         -- Ports of Axi Slave Bus Interface S00_AXI
         s00_axi_resetn  : in  std_logic;
         s00_axi_awaddr  : in  std_logic_vector(ADDR_WIDTH+DATA_WIDTH/32 downto 0);
@@ -172,7 +171,7 @@ architecture arch_imp of rp_trig is
     alias  state_buf: std_logic_vector(STAT_COUNT*DATA_WIDTH-1 downto 0) is data_buf(STAT_HEAD downto STAT_BASE);
     alias  ctrl_buf : std_logic_vector(CTRL_COUNT*DATA_WIDTH-1 downto 0) is data_buf(CTRL_HEAD downto CTRL_BASE);
     alias  head_buf : std_logic_vector(HEAD_COUNT*DATA_WIDTH-1 downto 0) is data_buf(HEAD_HEAD downto HEAD_BASE);
-    signal bram_douta_buf : std_logic_vector(BRAM_WIDTH-1 downto 0);
+    signal brama_dout_buf : std_logic_vector(BRAM_WIDTH-1 downto 0);
     signal idl      : std_logic;
     signal arm      : std_logic;
     signal run      : std_logic;
@@ -229,45 +228,41 @@ begin
     power_down <= c_extclk;
 
     ---- BRAM
-    bram_clka <= clk_axi_in;
-    bram_rsta <= '0';
-    bram_addra <= std_logic_vector(m_addr-offset);
+    brama_clk <= clk_axi_in;
+    brama_rst <= '0';
+--  brama_we <= axi_s00::WE;
+    brama_addr <= std_logic_vector(m_addr-offset);
 
-    bram_update : process(clk_axi_in, m_strb, m_wdata, bram_douta)
+    bram_update : process(clk_axi_in, m_strb, m_wdata, brama_dout)
     begin
         if rising_edge(clk_axi_in)
         then
-            bram_douta_buf <= bram_douta;
+            brama_dout_buf <= brama_dout;
             for i in 0 to BRAM_WIDTH/8-1
             loop
                 if m_strb(i) = '1'
-                then bram_dina(i*8+7 downto i*8) <= m_wdata(i*8+7 downto i*8);
-                else bram_dina(i*8+7 downto i*8) <= bram_douta_buf(i*8+7 downto i*8);
+                then brama_din(i*8+7 downto i*8) <= m_wdata(i*8+7 downto i*8);
+                else brama_din(i*8+7 downto i*8) <= brama_dout_buf(i*8+7 downto i*8);
                 end if;
             end loop;
         end if;
     end process;
 
-    process(m_addr, bram_douta, data_buf)
+    process(m_addr, brama_dout, data_buf)
     begin
         if m_addr < offset
         then
             m_rdata <= data_buf(addr2base(m_addr)+DATA_WIDTH-1 downto addr2base(m_addr));
         else
-            m_rdata(BRAM_WIDTH-1 downto 0         ) <=  bram_douta;
+            m_rdata(BRAM_WIDTH-1 downto 0         ) <=  brama_dout;
             m_rdata(DATA_WIDTH-1 downto BRAM_WIDTH) <= (others => '0');
         end if;
     end process;
---    m_rdata(BRAM_WIDTH-1 downto 0         ) <=
---        data_buf(addr2base(m_addr)+BRAM_WIDTH-1 downto addr2base(m_addr)           ) when m_addr < offset else bram_douta;
---    m_rdata(DATA_WIDTH-1 downto BRAM_WIDTH) <=
---        data_buf(addr2base(m_addr)+DATA_WIDTH-1 downto addr2base(m_addr)+BRAM_WIDTH) when m_addr < offset else (others => '0');
     -- b channel
-    bram_rstb <= '0';
-    bram_clkb <= clk_axi_in;
-    bram_addrb <= std_logic_vector(s_addr);
-    bram_enb <= '1';
-    bram_web <= '0';
+    bramb_clk <= clk_axi_in;
+    bramb_rst <= '0';
+    bramb_en <= '1';
+    bramb_addr <= std_logic_vector(s_addr);
     
     process(clk_axi_in, m_addr, m_strb, m_wdata, head_save, data_buf, state)
     begin
@@ -306,8 +301,8 @@ begin
         end if;
     end process;
 
-    time_buf <= unsigned(bram_doutb(BRAM_WIDTH-8-1 downto 0));
-    mask_buf <= bram_doutb(BRAM_WIDTH-1 downto BRAM_WIDTH-8);
+    time_buf <= unsigned(bramb_dout(BRAM_WIDTH-8-1 downto 0));
+    mask_buf <= bramb_dout(BRAM_WIDTH-1 downto BRAM_WIDTH-8);
 
 ---- Instantiation of Axi Bus Interface S00_AXI
     axi : rp_trig_axi
@@ -321,8 +316,8 @@ begin
             DATA_IN       => m_rdata,
             DATA_OUT      => m_wdata,
             STRB_OUT      => m_strb,
-            WE_OUT        => bram_wea,
-            EN_OUT        => bram_ena,
+            WE_OUT        => brama_we,
+            EN_OUT        => brama_en,
             S_AXI_CLK     => clk_axi_in,
             S_AXI_RESETN  => s00_axi_resetn,
             S_AXI_AWADDR  => s00_axi_awaddr,

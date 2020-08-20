@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 entity rp_trig_prog is
     generic (
-       ADDR_WIDTH  : integer := 16;
+        ADDR_WIDTH  : integer := 16;
         DATA_WIDTH  : integer := 64;
         TIME_WIDTH  : integer := 40;
         HEAD_COUNT  : integer := 7;

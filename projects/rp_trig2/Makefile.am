@@ -3,12 +3,13 @@ include $(top_srcdir)/fpga/Common.mk
 
 FPGA_REPO_DIR += $(top_builddir)/fpga/lib/red-pitaya-notes
 
-maxThreads = 16
+maxThreads = 8
 
 ## CORES ##
 VENDOR = rp
 LIBRARY = ip
 vivado_CORES = trig_1.0
+#trig_VERSION = 1.0
 trig_SOURCES = \
 	src/rp_trig.vhd \
 	src/rp_trig_axi.vhd \
@@ -45,3 +46,8 @@ clean-local:: clean
 	@$(RM) -rf ip prj edit
 
 all: linux cores projects bitstream
+
+
+cores:
+	@rm -rf ip/vivado/rp_trig_1.0/src \
+	&& ln -sfT  ../../../src  ip/vivado/rp_trig_1.0/src

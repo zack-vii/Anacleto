@@ -1,7 +1,7 @@
 //Copyright 1986-2017 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2017.2 (lin64) Build 1909853 Thu Jun 15 18:39:10 MDT 2017
-//Date        : Thu Aug 20 13:56:35 2020
+//Date        : Thu Aug 20 18:23:54 2020
 //Host        : mds-data-2 running 64-bit unknown
 //Command     : generate_target system.bd
 //Design      : system
@@ -652,7 +652,6 @@ module system
   wire [15:0]rp_trig_0_BRAM_PORTB_ADDR;
   wire rp_trig_0_BRAM_PORTB_CLK;
   wire [47:0]rp_trig_0_BRAM_PORTB_DOUT;
-  wire rp_trig_0_BRAM_PORTB_WE;
   wire trg_in_1;
   wire trig_clk_int_out;
   wire trig_clk_out;
@@ -745,7 +744,7 @@ module system
         .doutb(rp_trig_0_BRAM_PORTB_DOUT),
         .ena(rp_trig_0_BRAM_PORTA_EN),
         .wea(rp_trig_0_BRAM_PORTA_WE),
-        .web(rp_trig_0_BRAM_PORTB_WE));
+        .web(1'b0));
   system_clk_wiz_0_0 clk_wiz_0
        (.clk_in1(proc_sys7_FCLK_CLK0),
         .clk_out1(clk_wiz_0_clk_out1),
@@ -830,16 +829,15 @@ module system
         .peripheral_aresetn(proc_sys_reset_peripheral_aresetn),
         .slowest_sync_clk(proc_sys7_FCLK_CLK0));
   system_trig_0 trig
-       (.bram_addra(rp_trig_0_BRAM_PORTA_ADDR),
-        .bram_addrb(rp_trig_0_BRAM_PORTB_ADDR),
-        .bram_clka(rp_trig_0_BRAM_PORTA_CLK),
-        .bram_clkb(rp_trig_0_BRAM_PORTB_CLK),
-        .bram_dina(rp_trig_0_BRAM_PORTA_DIN),
-        .bram_douta(rp_trig_0_BRAM_PORTA_DOUT),
-        .bram_doutb(rp_trig_0_BRAM_PORTB_DOUT),
-        .bram_ena(rp_trig_0_BRAM_PORTA_EN),
-        .bram_wea(rp_trig_0_BRAM_PORTA_WE),
-        .bram_web(rp_trig_0_BRAM_PORTB_WE),
+       (.brama_addr(rp_trig_0_BRAM_PORTA_ADDR),
+        .brama_clk(rp_trig_0_BRAM_PORTA_CLK),
+        .brama_din(rp_trig_0_BRAM_PORTA_DIN),
+        .brama_dout(rp_trig_0_BRAM_PORTA_DOUT),
+        .brama_en(rp_trig_0_BRAM_PORTA_EN),
+        .brama_we(rp_trig_0_BRAM_PORTA_WE),
+        .bramb_addr(rp_trig_0_BRAM_PORTB_ADDR),
+        .bramb_clk(rp_trig_0_BRAM_PORTB_CLK),
+        .bramb_dout(rp_trig_0_BRAM_PORTB_DOUT),
         .clk_axi_in(proc_sys7_FCLK_CLK0),
         .clk_ext_in(clk_1),
         .clk_int_in(clk_wiz_0_clk_out1),
