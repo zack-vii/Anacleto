@@ -208,7 +208,6 @@ class rptrig(object):
             raise
 
     def try_extclk(self, val=2):
-        from time import sleep
         self.debug(0)
         self.disarm()
         self.clksrc(0)
@@ -220,17 +219,17 @@ class rptrig(object):
             else:
                 print("Internal clock not idle?")
             self.clksrc(1)
-            self._make_sequence(delay=1e9, data=[0])
+            self._make_sequence(delay=1e9, data=numpy.zeros(1))
             self.arm()
-            sleep(0.1)
+            time.sleep(0.1)
             self.trig()
-            sleep(0.1)
+            time.sleep(0.1)
             if self.state == STATE_IDLE:  # clear extclk bit
-                self.clksrc(val & -2)
-                return False
+                raise Exception("invalid state")
             self.clksrc(val | 1)
             return True
-        except Exception:
+        except Exception as e:
+            self.clksrc(val & -2)
             return False
         finally:
             self.disarm()
@@ -286,6 +285,7 @@ class rptrig(object):
     def _make_sequence(
             self, delay=None, width=None, period=None,
             burst=None, cycle=None, repeat=None, data=()):
+        print(data)
         dataref = data.ctypes.data_as(ctypes.POINTER(ctypes.c_uint64))
         buf = rptrig._toctypes(
             delay, width, period, burst, cycle, repeat, len(data))
