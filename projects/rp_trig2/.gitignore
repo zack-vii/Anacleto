@@ -5,3 +5,9 @@ src_prj/ui/
 src_prj/system.bxml
 src_prj/system_ooc.xdc
 linux/rptrig
+doc/*.aux
+doc/*.bbl
+doc/*.blg
+doc/*.out
+doc/*.synctex
+
