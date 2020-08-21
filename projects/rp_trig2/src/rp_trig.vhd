@@ -192,6 +192,8 @@ architecture arch_imp of rp_trig is
     alias  c_clear  : std_logic is cc_clear(0);
     alias  c_save   : std_logic is cc_save(0);
     alias  c_extclk : std_logic is cc_clksrc(0);
+    alias  c_trgsync: std_logic is cc_clksrc(1);
+    alias  c_intclk : std_logic is cc_clksrc(2);
 begin
     clock_divider : for i in -INT_CLK_EXP to 30
     generate
@@ -225,8 +227,7 @@ begin
     state_out <= state(7 downto 0);
     signal_out <= signals;
 
-    power_down <= c_extclk;
-
+    power_down <= c_extclk and not c_intclk;
     ---- BRAM
     brama_clk <= clk_axi_in;
     brama_rst <= '0';
