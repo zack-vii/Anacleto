@@ -254,7 +254,7 @@ int PREFIX(MakeSequence)(
 		fputs(error, stderr);
 		return C_PARAM_ERROR;
 	}
-	uint64_t count = *count_p;
+	const uint64_t count = *count_p;
 	CHECK_INPUTS
 	if (count < 1)
 	{
@@ -262,11 +262,11 @@ int PREFIX(MakeSequence)(
 		fputs(error, stderr);
 		return C_PARAM_ERROR;
 	}
-	uint64_t periodxburst = period*burst;
+	const uint64_t periodxburst = period*burst;
 	if (cycle_p)
 	{
 		cycle = *cycle_p;
-		if (cycle < (times[count-1] & MAX_TIME) + periodxburst)
+		if (cycle < (times[count-1] & MAX_TIME))
 		{
 			pos += sprintf(error+pos, "ERROR: CYCLE < TIMES[end] + PERIOD x BURST\n");
 			pos += sprintf(error+pos, "               TIMES[end]: %llu\n", times[count-1] & MAX_TIME);
@@ -283,16 +283,16 @@ int PREFIX(MakeSequence)(
 			pos += sprintf(error+pos, ", %llu", times[i] & MAX_TIME);
 		if (i == 16)
 			pos += sprintf(error+pos, ", ...");
-/*		if((times[i]& MAX_TIME) < (times[i-1]& MAX_TIME) + periodxburst)
+		if((times[i]& MAX_TIME) < (times[i-1]& MAX_TIME))
 		{
-			pos += sprintf(error+pos, "\nERROR: TIMES[%d] - TIMES[%d] < PERIOD x BURST\n", i, i-1);
+			pos += sprintf(error+pos, "\nERROR: TIMES[%d] <= TIMES[%d]\n", i, i-1);
 			fputs(error, stderr);
 			return C_PARAM_ERROR;
 		}
-*/
+
 	}
 	pos += sprintf(error+pos, "],\n");
-	int c_status = PREFIX(SetParams)(delay, width, period, burst, cycle, repeat, count, &pos);
+	const int c_status = PREFIX(SetParams)(delay, width, period, burst, cycle, repeat, count, &pos);
 	fputs(error, stdout);
 	if(c_status)
 		return c_status;
@@ -310,7 +310,6 @@ int PREFIX(Trig)()
 
 int PREFIX(Arm)()
 {
-	int i;
 	INIT_DEVICE
 	dev->w_clear = 1;
 	dev->w_init    = INIT_ARM;
@@ -319,7 +318,6 @@ int PREFIX(Arm)()
 
 int PREFIX(Rearm)()
 {
-	int i;
 	INIT_DEVICE
 	dev->w_clear = 1;
 	dev->w_init = INIT_REARM;
