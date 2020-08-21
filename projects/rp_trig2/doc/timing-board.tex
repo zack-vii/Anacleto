@@ -5,6 +5,7 @@
 \usepackage[colorlinks=true]{hyperref}
 \usepackage{verbatim,calc,listings,lscape}
 \usepackage[margin=1cm]{geometry}
+\usepackage{listings}
 \begin{comment}
 :Title: Timing diagram
 :Tags: Diagrams, Macro packages
@@ -184,17 +185,21 @@ address&name&type&description\\\hline
   \end{minipage}
 \end{table}
 
-\subsubsection*{LED and DIO connections}
-	\begin{tabular}[t]{l||cccccccccccccccc}
-		pin      & $1$  & $2$    & $3$       & $4$     & $5$   & $6$      & $7$      & $8$  & $9$  & $10$  & $11$  & $12$ & $13$ \\\hline
-		p(inner) & +3V3 & ch0    & ch1       & ch2     & ch3   & ch4      & ch5      & ch6  & ch7  & nc    & nc    & nc   & gnd  \\\hline
-		n(outer) & +3V3 & trg\_in & trg\_out & clk\_in & 10MHz & clk\_out & run\_out & nc   & nc   & nc    & nc    & nc   & gnd  \\
-	\end{tabular}	\\\textbf{input}, output, \textit{inverted}\\
-\subsubsection*{LED}
-	\begin{tabular}[t]{l||cc|cc|cc|cc|cc|cc|cc|cc}
-		index & $0$  & $1$  & $2$  & $3$  & $4$ & $5$ & $6$ & $7$  & $8$  & $9$  & $P$  & $D$\\\hline
-		led  & CH0  & CH1  & CH2 & CH3 & idle& & active & clock \\\hline
-		\end{tabular}	\\\textbf{input}, output, \textit{inverted}\\
+\begin{table}[htb]
+	\begin{tabular}{l||cccccccccccccccc}
+		pin      & 1    & 2                & 3        & 4                & 5     & 6        & 7        & 8   & 9   & 10 & 11 & 12 & 13  \\\hline
+		p(inner) & +3V3 & ch0              & ch1      & ch2              & ch3   & ch4      & ch5      & ch6 & ch7 & nc & nc & nc & gnd \\
+		n(outer) & +3V3 & \textbf{trg\_in} & trg\_out & \textbf{clk\_in} & 10MHz & clk\_out & run\_out & nc  & nc  & nc & nc & nc & gnd \\
+	\end{tabular}
+	\caption{DIO connections (\textbf{input}, output)}
+	\label{dio_connections}
+	\begin{tabular}{l||ccc|ccc|cc|cccc}
+		index & 0    & 1    & 2    & 3    & 4     & 5       & 6       & 7     & 8     & 9     & P     & D \\\hline
+		led   & ch0  & ch1  & ch2  & idle & armed & running & trigger & clock & cpu   & heart & power & fpga
+	\end{tabular}
+	\caption{LED connections}
+	\label{led_connections}
+\end{table}
 
 Channels ch0-ch5 can be inverted or switched to gate mode using the invert() and gate() method, respectively. 
 
@@ -253,6 +258,17 @@ The jitter is minimal. The timestamps of the TTLs can be calculate with little u
 
 \subsection*{Trigger schema in reinit mode}
 At W7X there will be a trigger $T_0=-60$s before the experiment starts at $T_1=0$s. This trigger will engage the initialization of all diagnostics as well as the timing module. In order to supports output signals even seconds before $T_1$ it is required to trigger the timing module with $T_0$. In reinit mode the triggered module enters the delay phase set to $60$s. During the delay phase the module accepts a reconfiguration (makeClock, makeSequence) without loosing track of the tick count with respect to $T_0$. The updated delay and timing configuration are used for the rest of the program. If the device is not configured before the end of delay, it returns to armed state without generating any pulse.
+
+\section{examples}
+\subsection{CH1 10MHz, CH2 500kHz}
+\begin{lstlisting}
+import devices.rp_trig
+rp = devices.rp_trig.rp_trig('rp-fc432c')
+rp.gate(2)
+rp.make_sequence(cycle=20, repeat=3e10, times=[0, 10])
+rp.arm()
+rp.trig()
+\end{lstlisting}
 
 \clearpage\thispagestyle{empty}
 \begin{landscape}
