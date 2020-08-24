@@ -42,7 +42,7 @@ Status = namedtuple("Status", (
     "cycle",
     "sequence",
     "burst",
-    "total",
+    "repeat",
     "flags",
 ))
 
