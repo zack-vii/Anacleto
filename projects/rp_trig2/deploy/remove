@@ -1,0 +1,15 @@
+#!/bin/sh
+tgz=${1:-/root/rp_trig2.tgz}
+rw
+mount -o remount,rw /boot
+systemctl stop rptrig
+systemctl disable rptrig
+rmmod usermem
+for path in $(tar -ztf "$tgz" | sed -n 's/.\/\(..*\)/\/\1/p' | sort -r); do
+  if test -d "$path" ; then
+    rmdir "$path"
+  else
+    rm "$path"
+  fi
+done 2>/dev/null
+sync

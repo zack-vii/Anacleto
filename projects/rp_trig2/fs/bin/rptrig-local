@@ -564,10 +564,10 @@ class Test(unittest.TestCase):
         self.wait(delay/2)
         self.assertFalse(self.dev.state & STATE_NOTWAIT)
         self.wait((delay+cycle-width)/2)
-        self.assertEqual(self.dev.status.total, 1)
+        self.assertEqual(self.dev.status.repeat, 1)
         self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
         self.wait(cycle)
-        self.assertEqual(self.dev.status.total, 2)
+        self.assertEqual(self.dev.status.repeat, 2)
         self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
         self.wait((cycle+width)/2)
         self.assertTrue(self.dev.state & STATE_IDLE)

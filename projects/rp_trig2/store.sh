@@ -3,10 +3,13 @@ src=$(realpath $(dirname $0))
 KVER=${KVER:-4.9.0}
 u512=$src/../usermem
 name=${1:-$(basename $src)}
+
 makedest () {
+raw=$1
 dest=~/rp/${name}$1
 mkdir -p $dest
 }
+
 makedest /
 rm -rf $dest/*
 cp -rf $src/fs/* $u512/fs/* $dest
@@ -20,6 +23,5 @@ makedest /bin
 cp $src/linux/rptrig $dest
 makedest /lib/modules/${KVER}-xilinx/
 cp $u512/linux/usermem.ko $dest
-
 makedest
-tar -zcf $dest.tgz -C $dest .
+fakeroot tar -zcf $dest.tgz -C $dest .

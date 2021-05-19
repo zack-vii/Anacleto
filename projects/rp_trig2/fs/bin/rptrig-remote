@@ -204,7 +204,7 @@ class rp_trig:
     def _make_sequence(
             self, delay=-1, width=-1, period=-1,
             burst=-1, cycle=-1, repeat=-1, data=(255 << TIME_WIDTH,)):
-        data = numpy.array(data, numpy.int64).tostring()
+        data = numpy.array(data, numpy.int64).tobytes()
         args = rp_trig._tointargs(delay, width, period, burst, cycle, repeat)
         msg = rp_trig._make_msg(b'S', '<6q', *args, append=len(data))
         return self._exchange_str(msg + data)
@@ -384,10 +384,10 @@ class Test(unittest.TestCase):
         self.wait(delay/2)
         self.assertFalse(self.dev.state & STATE_NOTWAIT)
         self.wait((delay+cycle-width)/2)
-        self.assertEqual(self.dev.status.total, 1)
+        self.assertEqual(self.dev.status.repeat, 1)
         self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
         self.wait(cycle)
-        self.assertEqual(self.dev.status.total, 2)
+        self.assertEqual(self.dev.status.repeat, 2)
         self.assertTrue(self.dev.state & STATE_ACTIVE)  # LOW
         self.wait((cycle+width)/2)
         self.assertTrue(self.dev.state & STATE_IDLE)

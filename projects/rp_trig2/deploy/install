@@ -1,0 +1,17 @@
+#!/bin/sh
+tgz=${1:-/root/rp_trig2.tgz}
+set +e
+if ! apt -y install python-numpy; then
+  apt update
+  apt -y install python-numpy dkms
+fi
+rw
+mount -o remount,rw /boot
+tar -zxf "$tgz" -C /
+echo /lib/modules/4.9.0-xilinx/usermem.ko > /lib/modules/4.9.0-xilinx/modules.order
+touch /lib/modules/4.9.0-xilinx/modules.builtin
+depmod
+modprobe usermem
+systemctl enable rptrig
+systemctl start rptrig
+sync
